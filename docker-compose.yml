@@ -31,6 +31,7 @@ services:
 # This shouldn't need to be exposed externally
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db-init.sql:/docker-entrypoint-initdb.d/1-db-init.sql
 networks:
   webnet:
 volumes:
