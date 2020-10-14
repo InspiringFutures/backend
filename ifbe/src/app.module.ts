@@ -4,6 +4,7 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { Group } from "./group.model";
 import { Client } from "./client.model";
 import { ClientController } from "./client.controller";
+import { RootController } from "./root.controller";
 
 @Module({
   imports: [SequelizeModule.forRoot({
@@ -17,7 +18,7 @@ import { ClientController } from "./client.controller";
                                     }),
       SequelizeModule.forFeature([Group, Client]),
   ],
-  controllers: [GroupController, ClientController],
+  controllers: [GroupController, ClientController, RootController],
   providers: [],
 })
 export class AppModule {}
