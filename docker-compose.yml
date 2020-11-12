@@ -1,23 +1,23 @@
 version: "3.8"
 services:
-  main:
-    build:
-      context: ifbe
-      target: development
-    volumes:
-      - ./ifbe:/usr/src/app
-      - /usr/src/app/node_modules
-    ports:
-      - ${SERVER_PORT}:3000
-      - 9229:9229
-    command: npm run start:dev
-    env_file:
-      - .env
-    networks:
-      - webnet
-    depends_on:
-      - postgres
-      - swift
+#  main:
+#    build:
+#      context: ifbe
+#      target: development
+#    volumes:
+#      - ./ifbe:/usr/src/app
+#      - /usr/src/app/node_modules
+#    ports:
+#      - ${SERVER_PORT}:${SERVER_PORT}
+#      - 9229:9229
+#    command: npm run start:dev
+#    env_file:
+#      - .env
+#    networks:
+#      - webnet
+#    depends_on:
+#      - postgres
+#      - swift
   postgres:
     image: postgres:12
     networks:
@@ -30,14 +30,16 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db-init.sql:/docker-entrypoint-initdb.d/1-db-init.sql
+    ports:
+      - 5432:5432
   swift:
     image: morrisjobke/docker-swift-onlyone
     networks:
       - webnet
     volumes:
       - swift_data:/srv
-    environment:
-      SWIFT_DEFAULT_CONTAINER: CLIENT_TOKENS
+    ports:
+      - 8055:8080
 networks:
   webnet:
 volumes:

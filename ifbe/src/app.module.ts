@@ -5,6 +5,9 @@ import { Group } from "./group.model";
 import { Client } from "./client.model";
 import { ClientController } from "./client.controller";
 import { RootController } from "./root.controller";
+import GoogleServiceProvider from "./google.service";
+import { LoginController } from "./login.controller";
+import { Admin } from "./admin.model";
 
 @Module({
   imports: [SequelizeModule.forRoot({
@@ -14,11 +17,11 @@ import { RootController } from "./root.controller";
                                       username: 'dev',
                                       password: 'password',
                                       database: 'dev',
-                                      models: [Group, Client],
+                                      models: [Group, Client, Admin],
                                     }),
-      SequelizeModule.forFeature([Group, Client]),
+      SequelizeModule.forFeature([Group, Client, Admin]),
   ],
-  controllers: [GroupController, ClientController, RootController],
-  providers: [],
+  controllers: [GroupController, ClientController, RootController, LoginController],
+  providers: [GoogleServiceProvider],
 })
 export class AppModule {}
