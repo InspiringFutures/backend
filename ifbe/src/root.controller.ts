@@ -1,8 +1,11 @@
-import { Controller, Get, Injectable } from '@nestjs/common';
+import { Get, Injectable } from '@nestjs/common';
 import { InjectModel } from "@nestjs/sequelize";
-import * as SwiftClient from 'openstack-swift-client-region';
+import SwiftClient from 'openstack-swift-client-region';
 
-import { Group } from "./group.model";
+import { Group } from "./model/group.model";
+import { Controller, Page } from './util/autopage';
+import { UserService } from "./service/user.service";
+import { redirect } from "./util/redirect";
 
 @Controller('')
 @Injectable()
@@ -10,9 +13,19 @@ export class RootController {
     constructor(
         @InjectModel(Group)
         private groupModel: typeof Group,
+        private userService: UserService,
     ) {}
 
-    @Get('')
+    @Page()
+    async home() {
+        const user = this.userService.currentUser();
+        if (user) {
+            return {user};
+        }
+        throw redirect('/login');
+    }
+
+    @Get('status')
     async root() {
         const groupCount = await this.groupModel.count();
         const authenticator = new SwiftClient.SwiftAuthenticator('http://swift:8055/auth/v1.0', 'test:tester', 'testing');

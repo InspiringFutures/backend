@@ -6,9 +6,10 @@ import {
 import { InjectModel } from "@nestjs/sequelize";
 import { generators } from "openid-client";
 
-import { GoogleService } from "./google.service";
-import { Admin } from "./admin.model";
-import { redirect } from "./redirect";
+import { GoogleService } from "../service/google.service";
+import { Admin } from "../model/admin.model";
+import { redirect } from "../util/redirect";
+import { UserService } from "../service/user.service";
 
 @Controller('login')
 @Injectable()
@@ -17,6 +18,7 @@ export class LoginController {
         private googleService: GoogleService,
         @InjectModel(Admin)
         private adminModel: typeof Admin,
+        private userService: UserService,
     ) {}
 
     @Get('')
@@ -37,7 +39,7 @@ export class LoginController {
     }
 
     @Post('cb')
-    @Render('admin/index')
+    @Render('admin/error')
     async callback(@Session() session, @Req() req) {
         const params = this.googleService.client.callbackParams(req);
         const nonce = session.oauth_nonce;
@@ -61,9 +63,7 @@ export class LoginController {
                 }
                 await admin.save({silent: !updateName});
 
-                // Put admin id into session
-                session.admin_id = admin.id;
-                // TODO: More on session options; lifetime etc.
+                this.userService.loginUser(admin);
 
                 throw redirect('/');
             } else {

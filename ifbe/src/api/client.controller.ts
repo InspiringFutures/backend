@@ -6,9 +6,9 @@ import { UniqueConstraintError } from "sequelize";
 import { v4 as uuidv4 } from 'uuid';
 import SwiftClient from 'openstack-swift-client-region';
 
-import { Group } from "./group.model";
-import { Client } from "./client.model";
-import { CreateClientDto } from "./client.create.dto";
+import { Group } from "../model/group.model";
+import { Client } from "../model/client.model";
+import { CreateClientDto } from "../dto/client.create.dto";
 
 @Controller('api/client')
 @Injectable()

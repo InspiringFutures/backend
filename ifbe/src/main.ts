@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import session from 'express-session';
 import {createEngine} from 'express-react-views';
 import { join } from 'path';
@@ -6,7 +6,8 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import createMemoryStore from 'memorystore';
 
 import { AppModule } from './app.module';
-import { RedirectFilter } from "./redirect";
+import { RedirectFilter } from "./util/redirect";
+import { RolesGuard } from "./util/guard";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -23,6 +24,7 @@ async function bootstrap() {
   app.set('view engine', 'js');
   app.engine('js', createEngine());
   app.useGlobalFilters(new RedirectFilter());
+  app.useGlobalGuards(new RolesGuard(app.get(Reflector)));
   await app.listen(8115);
 }
 bootstrap();

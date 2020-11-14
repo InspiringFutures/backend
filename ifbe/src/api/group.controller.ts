@@ -1,7 +1,7 @@
 import { Controller, Get, HttpException, HttpStatus, Injectable, Param, Req } from '@nestjs/common';
 import { InjectModel } from "@nestjs/sequelize";
 
-import { Group } from "./group.model";
+import { Group } from "../model/group.model";
 
 @Controller('group')
 @Injectable()

@@ -1,13 +1,19 @@
+import { APP_GUARD, Reflector } from "@nestjs/core";
 import { Module } from '@nestjs/common';
-import { GroupController } from "./group.controller";
 import { SequelizeModule } from "@nestjs/sequelize";
-import { Group } from "./group.model";
-import { Client } from "./client.model";
-import { ClientController } from "./client.controller";
+
+import { GroupController } from "./api/group.controller";
+import { Group } from "./model/group.model";
+import { Client } from "./model/client.model";
+import { ClientController } from "./api/client.controller";
 import { RootController } from "./root.controller";
-import GoogleServiceProvider from "./google.service";
-import { LoginController } from "./login.controller";
-import { Admin } from "./admin.model";
+import { GoogleServiceProvider } from "./service/google.service";
+import { LoginController } from "./controller/login.controller";
+import { Admin } from "./model/admin.model";
+import { SampleController } from './sample.controller';
+import { UserService } from './service/user.service';
+import { RolesGuard } from "./util/guard";
+import { AdminController } from "./controller/admin.controller";
 
 @Module({
   imports: [SequelizeModule.forRoot({
@@ -21,7 +27,7 @@ import { Admin } from "./admin.model";
                                     }),
       SequelizeModule.forFeature([Group, Client, Admin]),
   ],
-  controllers: [GroupController, ClientController, RootController, LoginController],
-  providers: [GoogleServiceProvider],
+  controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController],
+  providers: [GoogleServiceProvider, UserService],
 })
 export class AppModule {}

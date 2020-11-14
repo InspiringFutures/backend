@@ -4,7 +4,7 @@ export class GoogleService{
     constructor(public client: Client) {}
 }
 
-const GoogleServiceProvider = {
+export const GoogleServiceProvider = {
     provide: GoogleService,
     useFactory: async () => {
         const googleIssuer = await Issuer.discover('https://accounts.google.com');
@@ -16,5 +16,3 @@ const GoogleServiceProvider = {
         }));
     },
 };
-
-export default GoogleServiceProvider;
