@@ -25,6 +25,12 @@ async function bootstrap() {
   app.engine('js', createEngine());
   app.useGlobalFilters(new RedirectFilter());
   app.useGlobalGuards(new RolesGuard(app.get(Reflector)));
+  app.use ((req, res, next) => {
+    res.locals.url = req.originalUrl;
+    res.locals.host = req.get('host');
+    res.locals.protocol = req.protocol;
+    next();
+  });
   await app.listen(8115);
 }
 bootstrap();

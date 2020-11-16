@@ -14,6 +14,8 @@ import { SampleController } from './sample.controller';
 import { UserService } from './service/user.service';
 import { RolesGuard } from "./util/guard";
 import { AdminController } from "./controller/admin.controller";
+import { GroupService } from "./service/group.service";
+import { GroupPermission } from "./model/groupPermission.model";
 
 @Module({
   imports: [SequelizeModule.forRoot({
@@ -23,11 +25,11 @@ import { AdminController } from "./controller/admin.controller";
                                       username: 'dev',
                                       password: 'password',
                                       database: 'dev',
-                                      models: [Group, Client, Admin],
+                                      models: [Group, Client, Admin, GroupPermission],
                                     }),
-      SequelizeModule.forFeature([Group, Client, Admin]),
+      SequelizeModule.forFeature([Group, Client, Admin, GroupPermission]),
   ],
   controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController],
-  providers: [GoogleServiceProvider, UserService],
+  providers: [GoogleServiceProvider, UserService, GroupService],
 })
 export class AppModule {}

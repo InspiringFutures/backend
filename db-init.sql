@@ -29,3 +29,15 @@ CREATE TABLE "Admins" (id serial PRIMARY KEY,
 );
 
 INSERT INTO "Admins" ("email", "level") VALUES ('rhm31@cam.ac.uk', 'super');
+
+CREATE TYPE GROUP_ACCESS_LEVEL AS ENUM ('view', 'edit', 'owner');
+
+CREATE TABLE "GroupPermission" (id serial PRIMARY KEY,
+    "groupId" integer NOT NULL,
+    FOREIGN KEY ("groupId") REFERENCES "Groups" (id),
+    "adminId" integer NOT NULL,
+    FOREIGN KEY ("adminId") REFERENCES "Admins" (id),
+	"level" GROUP_ACCESS_LEVEL NOT NULL DEFAULT 'view',
+	"createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+	"updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);

@@ -4,20 +4,10 @@ import { Request } from 'express';
 
 import { Admin, AdminLevel } from "../model/admin.model";
 
-export enum GroupAccessLevel {
-    'view' = 'view',
-    'edit' = 'edit',
-    'owner' = 'owner'
-}
-export interface GroupPermission {
-    level: GroupAccessLevel;
-    groupId : number;
-}
-
 export interface User {
+    id: number,
     name: string;
     level: AdminLevel;
-    groups: GroupPermission[];
 }
 
 const USER_SESSION_KEY = "cachedCurrentUser";
@@ -29,13 +19,18 @@ export class UserService {
 
     loginUser(admin: Admin) {
         this.request.session[USER_SESSION_KEY] = this.cachedCurrentUser = {
+            id: admin.id,
             name: admin.name,
             level: admin.level,
-            groups: []
         };
     }
 
     currentUser(): User|null {
+        return {
+            id: 1,
+            name: "Robin",
+            level: AdminLevel.super,
+        };
         if (this.cachedCurrentUser) return this.cachedCurrentUser;
         if (this.request.session[USER_SESSION_KEY]) {
             return this.cachedCurrentUser = this.request.session[USER_SESSION_KEY];

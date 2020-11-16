@@ -6,8 +6,8 @@ import { UserService } from "../service/user.service";
 
 const GUARD_ROLE_METADATA = 'GUARD_ROLE_METADATA';
 
-export const NeedsAdmin = () => SetMetadata(GUARD_ROLE_METADATA, AdminLevel.normal);
-export const NeedsSuperAdmin = () => SetMetadata(GUARD_ROLE_METADATA, AdminLevel.super);
+export const NeedsAdmin = SetMetadata(GUARD_ROLE_METADATA, AdminLevel.normal);
+export const NeedsSuperAdmin = SetMetadata(GUARD_ROLE_METADATA, AdminLevel.super);
 
 @Injectable()
 export class RolesGuard implements CanActivate {

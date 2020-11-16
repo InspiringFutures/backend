@@ -1,11 +1,13 @@
 import {
-    AllowNull,
+    AllowNull, BelongsToMany,
     Column,
     Default,
     Model,
     Table
 } from 'sequelize-typescript';
 import { DataTypes } from "sequelize";
+import { GroupPermission } from "./groupPermission.model";
+import { Group } from "./group.model";
 
 export enum AdminLevel {
     normal = 'normal',
@@ -28,4 +30,7 @@ export class Admin extends Model<Admin> {
     @AllowNull(true)
     @Column
     lastLoginAt: Date;
+
+    @BelongsToMany(() => Group, () => GroupPermission)
+    groups: Array<Admin & {GroupPermission: GroupPermission}>;
 }
