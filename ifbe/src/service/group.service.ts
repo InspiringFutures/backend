@@ -1,6 +1,6 @@
 import { InjectModel } from "@nestjs/sequelize";
 import { Model } from 'sequelize-typescript';
-import { ForbiddenException } from "@nestjs/common";
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
 
 import { Admin, AdminLevel } from "../model/admin.model";
 import { User } from "./user.service";
@@ -46,9 +46,10 @@ export class GroupService {
                 {model: Admin},
                 {model: Client, separate: true}
             ],
-            rejectOnEmpty: true,
-
         }) as GroupWithAccessLevel; // Fill this in a minute
+        if (group === null) {
+            throw new NotFoundException("No such group found");
+        }
         // Check admin has access
         const permission = admin.level === AdminLevel.super ? GroupAccessLevel.owner :
             getOrElse(group.admins.find(a => a.id === admin.id), () => {
@@ -69,5 +70,10 @@ export class GroupService {
             const user = await this.adminModel.findOne({where: {email: newUser.email}, rejectOnEmpty: true});
             await this.groupPermissionModel.create({adminId: user.id, groupId: group.id, level: newUser.permission});
         }
+    }
+
+    async createGroupForUser(user: User, values: {code: string; name: string}) {
+        return await this.groupModel.create({...values, permissions: [{adminId: user.id, level: GroupAccessLevel.owner}]},
+                                            {include: [{all: true}]});
     }
 }

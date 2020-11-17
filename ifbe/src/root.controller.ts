@@ -16,11 +16,11 @@ export class RootController {
         private userService: UserService,
     ) {}
 
-    @Page()
+    @Get()
     async home() {
         const user = this.userService.currentUser();
         if (user) {
-            return {user};
+            throw redirect('/admin');
         }
         throw redirect('/login');
     }

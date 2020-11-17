@@ -20,4 +20,7 @@ export class Group extends Model<Group> {
 
     @BelongsToMany(() => Admin, () => GroupPermission)
     admins: Array<Admin & {GroupPermission: GroupPermission}>;
+
+    @HasMany(() => GroupPermission)
+    permissions: GroupPermission[];
 }

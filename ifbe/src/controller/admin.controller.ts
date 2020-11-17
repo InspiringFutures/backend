@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/sequelize";
 
 import { Controller, Page } from '../util/autopage';
 import { Admin, AdminLevel } from "../model/admin.model";
-import { NeedsAdmin } from "../util/guard";
+import { NeedsAdmin, NeedsSuperAdmin } from "../util/guard";
 import { redirect } from "../util/redirect";
 import { UserService } from "../service/user.service";
 import { GroupService } from "../service/group.service";
@@ -23,9 +23,9 @@ export class AdminController {
     @Page()
     @NeedsAdmin
     async index() {
-        const admin = this.userService.currentUser()!;
-        const groups = await this.groupService.groupsForUser(admin);
-        return {groups: groups.map(group => ({...group.get(), permission: group.permission}))};
+        const user = this.userService.currentUser()!;
+        const groups = await this.groupService.groupsForUser(user);
+        return {user, groups: groups.map(group => ({...group.get(), permission: group.permission}))};
     }
 
     @Page('group')
@@ -37,6 +37,15 @@ export class AdminController {
         return {
             group: {...group.get(), permission: group.permission, clients: getAll(group.clients), admins: getAll(group.admins)},
             protocol: 'foo'};
+    }
+
+    @Post('group')
+    @Render('admin/error')
+    @NeedsAdmin
+    async createGroup(@Body('name') name: string, @Body('code') code: string) {
+        const admin = this.userService.currentUser()!;
+        const group = await this.groupService.createGroupForUser(admin, {name, code});
+        throw redirect('/admin/group/' + group.id);
     }
 
     @Post('group/:id/admins')
@@ -57,8 +66,8 @@ export class AdminController {
 
     @Post('add')
     @Render('admin/error')
-    //@NeedsSuperAdmin
-    async add(@Body('email') email: string, @Body('superuser') superuser: boolean) {
+    @NeedsSuperAdmin
+    async createAdmin(@Body('email') email: string, @Body('superuser') superuser: boolean) {
 
         const admin = await this.adminModel.create({
                                                        email: email,

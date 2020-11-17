@@ -16,6 +16,7 @@ export default function({group, url}: Props) {
         {owner && <p>You are an owner of this group.</p>}
         <h2>Participants</h2>
         <ul>{group.clients.map(client => <li key={client.id}>{client.nickName}</li>)}</ul>
+        {group.clients.length === 0 && <em>There are currently no enrolled participants.</em>}
         <h2>Researchers</h2>
         <ul>{group.admins.map(admin => <li key={admin.id}>{admin.name || `${admin.email} (not logged in yet)`} – {admin.GroupPermission.level}</li>)}</ul>
         {owner && <form method='POST' action={url + '/admins'}>
