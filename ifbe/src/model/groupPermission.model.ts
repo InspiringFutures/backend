@@ -9,6 +9,7 @@ export enum GroupAccessLevel {
     'edit' = 'edit',
     'owner' = 'owner'
 }
+export const GroupAccessLevels = [GroupAccessLevel.view, GroupAccessLevel.edit, GroupAccessLevel.owner];
 
 @Table
 export class GroupPermission extends Model<GroupPermission> {

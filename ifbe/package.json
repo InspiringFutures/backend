@@ -26,6 +26,7 @@
     "@nestjs/platform-express": "^7.0.0",
     "@nestjs/sequelize": "^0.1.1",
     "@types/bluebird": "^3.5.32",
+    "@types/react": "^16.9.56",
     "@types/validator": "^13.1.0",
     "aws-sdk": "^2.770.0",
     "class-validator": "^0.12.2",
