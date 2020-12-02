@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  ifbe_test:
+    image: postgres:12
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: test
+      POSTGRES_DB: test
+      PG_DATA: /var/lib/postgresql/data
+    ports:
+      - 5430:5432
