@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { SequelizeModule, SequelizeModuleOptions } from "@nestjs/sequelize";
+import { MulterModule } from "@nestjs/platform-express";
 
 import { GroupController } from "./api/group.controller";
 import { Group } from "./model/group.model";
@@ -17,7 +18,7 @@ import { GroupPermission } from "./model/groupPermission.model";
 import { JournalService } from "./service/journal.service";
 import { Journal } from "./model/journal.model";
 import { JournalEntry } from "./model/journalEntry.model";
-import { MulterModule } from "@nestjs/platform-express";
+import { StorageService, StorageServiceProvider } from "./service/storage.service";
 
 const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry];
 const POSTGRES: SequelizeModuleOptions = {
@@ -38,20 +39,28 @@ const TEST: SequelizeModuleOptions = {
 };
 
 @Module({
+    providers: [StorageServiceProvider],
+    exports: [StorageService],
+})
+class StorageModule {}
+
+@Module({
   imports: [SequelizeModule.forRoot({
                                       ...(process.env.NODE_ENV === 'test' ? TEST : POSTGRES),
                                       models: MODELS,
                                     }),
       SequelizeModule.forFeature(MODELS),
+      StorageModule,
       MulterModule.registerAsync({
-          imports: [],
-          useFactory: async () => ({
-              dest: process.env.NODE_ENV === 'test' ? './test/temp_uploads' : (() => {throw new Error("Not configured yet")})(),
+          imports: [StorageModule],
+          inject: [StorageService],
+          useFactory: async (storageService: StorageService) => ({
+              storage: storageService.multerStorage(),
+              //dest: process.env.NODE_ENV === 'test' ? './test/temp_uploads' : (() => {throw new Error("Not configured yet")})(),
           }),
-          inject: [],
-      })
+      }),
   ],
   controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController],
-  providers: [GoogleServiceProvider, UserService, GroupService, JournalService],
+  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider],
 })
 export class AppModule {}

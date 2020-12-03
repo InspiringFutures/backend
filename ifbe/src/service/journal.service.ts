@@ -1,12 +1,12 @@
 import { InjectModel } from "@nestjs/sequelize";
+import { NotFoundException } from "@nestjs/common";
+import { Stream } from "stream";
 
 import { Client } from "../model/client.model";
 import { Take } from "../util/types";
 import { Journal } from "../model/journal.model";
 import { JournalEntry } from "../model/journalEntry.model";
-import { NotFoundException } from "@nestjs/common";
-import { Stream } from "stream";
-import * as fs from "fs";
+import { StorageService } from "./storage.service";
 
 export type PhotoContent = {type: 'photo'; url: string};
 export type VideoContent = {type: 'video'; url: string};
@@ -23,19 +23,21 @@ export type JournalContent = (TextContent | MediaContent | AudioContent) & {clie
 export type JournalType = Take<JournalContent, 'type'>;
 
 interface StorageItem {
-    path: string;
+    id: string;
 }
 
 export class JournalService {
-    constructor(@InjectModel(Journal) private journalModel: typeof Journal,
+    constructor(
+        @InjectModel(Journal) private journalModel: typeof Journal,
+        private storageService: StorageService,
     ) {}
 
     private static extractEntries(journal: JournalContent) {
         switch (journal.type) {
             case 'media':
-                return journal.media.map(m => ({clientEntryId: m.url, type: m.type}));
+                return journal.media.map((m, i) => ({clientEntryId: m.url, type: m.type, sequence: i + 1}));
             case 'audio':
-                return [{clientEntryId: journal.url, type: 'audio'}];
+                return [{clientEntryId: journal.url, type: 'audio', sequence: 0}];
             default:
                 return [];
         }
@@ -60,7 +62,7 @@ export class JournalService {
         return journal;
     }
 
-    async getMedia(clientId: number, journalId: number, journalEntryId: number): Promise<Stream> {
+    async getMedia(clientId: number, journalId: number, journalEntryId: number, target: Stream): Promise<void> {
         const journal = await this.get(clientId, journalId);
 
         const entry = journal.entries.find(entry => entry.id === journalEntryId);
@@ -68,18 +70,26 @@ export class JournalService {
             throw new NotFoundException("Unknown journal entry");
         }
 
-        return fs.createReadStream(entry.storageUrl);
+        await this.storageService.getIntoStream(entry.storageUrl, target);
     }
 
     async updateEntry(journal: Journal, url: string, upload: StorageItem) {
-        // Find the entry with the right URL(/clientEntryId)
+        // Find the entry with the right URL(i.e. clientEntryId)
         const entry = journal.entries.find(entry => entry.clientEntryId === url);
         if (!entry) {
             throw new NotFoundException("Unknown journal entry");
         }
 
-        // Store the uploaded URL in the entry
-        entry.storageUrl = upload.path;
+        // Store the uploaded id in the entry
+        entry.storageUrl = upload.id;
+
+        this.storageService.setMetadata(upload.id, {
+            'client-id': journal.clientId,
+            'journal-id': journal.id,
+            'journal-entry-id': entry.id,
+            'sequence': entry.sequence,
+            'type': entry.type,
+        });
 
         return await entry.save();
     }

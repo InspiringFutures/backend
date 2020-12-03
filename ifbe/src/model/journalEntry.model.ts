@@ -25,6 +25,10 @@ export class JournalEntry extends Model<JournalEntry> {
     @Column
     clientEntryId: string;
 
+    @AllowNull(false)
+    @Column
+    sequence: number;
+
     @AllowNull(true)
     @Column
     storageUrl: string;

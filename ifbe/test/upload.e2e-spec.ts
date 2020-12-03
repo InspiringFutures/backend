@@ -14,16 +14,21 @@ import { Stream } from "stream";
 
 async function runSQL(connection: Sequelize, path: string) {
     const data = await fs.readFileAsync(path);
-    const result = await connection.query(data.toString());
+    return await connection.query(data.toString());
 }
 
-function streamToString(stream: Stream) {
-    const chunks = [];
-    return new Promise((resolve, reject) => {
-        stream.on('data', chunk => chunks.push(chunk));
-        stream.on('error', reject);
-        stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    })
+class StringStream extends Stream.Writable {
+    private chunks: Buffer[];
+    constructor() {
+        super();
+        this.chunks = [];
+    }
+    _write(chunk: any, encoding: string, callback: (error?: Error | null) => void) {
+        this.chunks.push(chunk);
+    }
+    asString() {
+        return Buffer.concat(this.chunks).toString('utf8');
+    }
 }
 
 describe('Uploads from clients (e2e)', () => {
@@ -47,7 +52,7 @@ describe('Uploads from clients (e2e)', () => {
         return request(app.getHttpServer())
             .post('/api/client/1/' + url)
             .set('X-Token', token);
-    }
+    };
 
     it('Returns 403 if no token provided', async () => {
         await authClientPost('journal', null)
@@ -120,7 +125,9 @@ describe('Uploads from clients (e2e)', () => {
         const journalEntryId = mediaResponse.body.id;
 
         const journalService = app.get(JournalService);
-        expect(await streamToString(await journalService.getMedia(1, journalId, journalEntryId))).toEqual(TEST_MEDIA);
+        const stream = new StringStream();
+        await journalService.getMedia(1, journalId, journalEntryId, stream);
+        expect(stream.asString()).toEqual(TEST_MEDIA);
     });
 
     it('Multiple media upload', async () => {
@@ -148,8 +155,10 @@ describe('Uploads from clients (e2e)', () => {
             .expect(201)).body.id}));
 
         const journalService = app.get(JournalService);
-        journalEntryIds.forEach(async ({id, journalEntryId}) => {
-            expect(await streamToString(await journalService.getMedia(1, journalId, journalEntryId))).toEqual(TEST_MEDIA + id);
-        });
+        await Promise.all(journalEntryIds.map(async ({id, journalEntryId}) => {
+            const stream = new StringStream();
+            await journalService.getMedia(1, journalId, journalEntryId, stream);
+            expect(stream.asString()).toEqual(TEST_MEDIA + id);
+        }));
     });
 });

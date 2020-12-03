@@ -1,6 +1,6 @@
 version: "3.8"
 services:
-  ifbe_test:
+  ifbe_test_postgres:
     image: postgres:12
     environment:
       POSTGRES_PASSWORD: password
@@ -9,3 +9,14 @@ services:
       PG_DATA: /var/lib/postgresql/data
     ports:
       - 5430:5432
+  ifbe_test_swift:
+    image: morrisjobke/docker-swift-onlyone
+    environment:
+      SWIFT_DEFAULT_CONTAINER: client_media
+    ports:
+      - 8050:8080
+    volumes:
+      - ifbe_test_swift_data:/srv
+volumes:
+  ifbe_test_swift_data:
+

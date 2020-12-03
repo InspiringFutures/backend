@@ -18,6 +18,7 @@ async function bootstrap() {
     store: new MemoryStore({
         checkPeriod: 86400000 // prune expired entries every 24h
     }),
+    saveUninitialized: false,
     resave: false,
   }));
   app.setBaseViewsDir(join(__dirname, 'views'));
