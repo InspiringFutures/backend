@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/sequelize";
 
 import { Group } from "../model/group.model";
 
-@Controller('group')
+@Controller('api/group')
 @Injectable()
 export class GroupController {
     constructor(
@@ -17,9 +17,9 @@ export class GroupController {
         if (!group) {
             throw new HttpException('Unknown group code', HttpStatus.NOT_FOUND);
         }
-        if (group.apiUrl === null) {
-            group.apiUrl = request.protocol + "://" + request.get('Host') + "/api/";
+        if (group.apiURL === null) {
+            group.apiURL = request.protocol + "://" + request.get('Host') + "/api/";
         }
-        return {name: group.name, apiUrl: group.apiUrl};
+        return {name: group.name, apiURL: group.apiURL, code: group.code};
     }
 }

@@ -15,7 +15,7 @@ export class Group extends Model<Group> {
     code: string;
 
     @Column
-    apiUrl?: string;
+    apiURL?: string;
 
     @HasMany(() => Client)
     clients: Client[];

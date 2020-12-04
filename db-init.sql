@@ -1,18 +1,19 @@
 CREATE table "Groups" (id serial primary key,
 	code character varying unique not null,
 	name character varying not null,
-	"apiUrl" character varying,
+	"apiURL" character varying,
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now()
 );
 
 create table "Clients" (id serial primary key,
-	"nickName" character varying unique not null,
+	"nickName" character varying not null,
 	token character varying not null,
     "groupId" integer not null,
     foreign key ("groupId") references "Groups" (id),
 	"createdAt" timestamp not null default now(),
-	"updatedAt" timestamp not null default now()
+	"updatedAt" timestamp not null default now(),
+	unique key ("groupId", "nickName")
 );
 
 create type "ADMIN_LEVEL" as enum ('normal', 'super');
