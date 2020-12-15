@@ -83,7 +83,7 @@ export class JournalService {
         // Store the uploaded id in the entry
         entry.storageUrl = upload.id;
 
-        this.storageService.setMetadata(upload.id, {
+        await this.storageService.setMetadata(upload.id, {
             'client-id': journal.clientId,
             'journal-id': journal.id,
             'journal-entry-id': entry.id,

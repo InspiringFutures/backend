@@ -44,6 +44,7 @@ export class ClientController {
                                                              token,
                                                          });
             return {
+                id: client.id,
                 nickName: client.nickName,
                 token: client.token,
             };
