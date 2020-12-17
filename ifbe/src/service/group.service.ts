@@ -6,7 +6,7 @@ import { Admin, AdminLevel } from "../model/admin.model";
 import { User } from "./user.service";
 import { Group } from "../model/group.model";
 import { GroupAccessLevel, GroupPermission } from "../model/groupPermission.model";
-import { Client } from "../model/client.model";
+import { Client, ClientStatus } from '../model/client.model';
 import { getOrElse } from "../util/functional";
 
 type GroupWithAccessLevel = Group & { permission: GroupAccessLevel };
@@ -17,6 +17,10 @@ export class GroupService {
                 @InjectModel(Admin) private adminModel: typeof Admin,
                 @InjectModel(GroupPermission) private groupPermissionModel: typeof GroupPermission,
     ) {}
+
+    async groupFromCode(code: string) {
+        return this.groupModel.findOne({ where: { code } });
+    }
 
     async groupsForUser(admin: User) {
         const groups = await this.groupModel.findAll({
@@ -76,4 +80,21 @@ export class GroupService {
         return await this.groupModel.create({...values, permissions: [{adminId: user.id, level: GroupAccessLevel.owner}]},
                                             {include: [{all: true}]});
     }
+
+    async addParticipants(group: Group, participantIDs: string[]) {
+        return this.clientModel.bulkCreate(participantIDs.map(participantID => ({
+            participantID,
+            status: ClientStatus.added,
+            groupId: group.id,
+        })));
+    }
+
+    async getClientInGroup(group: Group, clientId: number) {
+        const client = await this.clientModel.findByPk(clientId);
+        if (client.groupId !== group.id) {
+            throw new ForbiddenException('That client is not in this group');
+        }
+        return client;
+    }
+
 }

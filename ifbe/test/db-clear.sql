@@ -8,3 +8,4 @@ drop type if exists "ADMIN_LEVEL";
 drop type if exists "GROUP_ACCESS_LEVEL";
 drop type if exists "ENTRY_TYPE";
 drop type if exists "JOURNAL_TYPE";
+drop type if exists "CLIENT_STATUS";

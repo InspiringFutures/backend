@@ -1,4 +1,13 @@
-import { Body, ForbiddenException, Get, Injectable, Param, Post, Render, } from '@nestjs/common';
+import {
+    BadRequestException,
+    Body,
+    ForbiddenException,
+    Get,
+    Injectable,
+    Param,
+    Post,
+    Render,
+} from '@nestjs/common';
 import { InjectModel } from "@nestjs/sequelize";
 
 import { Controller, Page } from '../util/autopage';
@@ -9,6 +18,8 @@ import { UserService } from "../service/user.service";
 import { GroupService } from "../service/group.service";
 import { GroupAccessLevel } from "../model/groupPermission.model";
 import { getAll } from "../util/functional";
+import { ValidationError } from 'sequelize';
+import { ClientStatus } from '../model/client.model';
 
 @Controller('admin')
 @Injectable()
@@ -77,5 +88,46 @@ export class AdminController {
             throw redirect('/admin');
         }
         return {msg: "There was a problem creating " + email};
+    }
+
+    @Post('group/:id/clients')
+    @Render('admin/error')
+    @NeedsAdmin
+    async addParticipants(@Param('id') groupId, @Body('participants') participants: string) {
+        const admin = this.userService.currentUser()!;
+        const group = await this.groupService.groupForUser(admin, groupId);
+        if (group.permission === GroupAccessLevel.view) {
+            throw new ForbiddenException("You need to be a group owner or editor to modify participants");
+        }
+        const participantIDs = participants.split(/[\r\n]+/).map(p => p.trim());
+        if (participantIDs.length === 0) {
+            return {msg: "You must specify at least one participant ID"};
+        }
+        try {
+            await this.groupService.addParticipants(group, participantIDs);
+        } catch (e) {
+            if (e instanceof ValidationError) {
+                // We only get a validation error for the first participant that fails to insert
+                const existing = e.errors.filter(e => e.path === 'participantID').map(e => e.value).join(', ');
+                return {msg: "One or more of those participant IDs have already been used, such as: " + existing};
+            }
+            return {msg: "There was a problem adding those participants: " + e.message};
+        }
+        throw redirect('/admin/group/' + groupId);
+    }
+
+    @Post('group/:id/client/:clientId/status')
+    @Render('admin/error')
+    @NeedsAdmin
+    async setClientStatus(@Param('id') groupId, @Param('clientId') clientId, @Body('newStatus') newStatus: ClientStatus) {
+        const admin = this.userService.currentUser()!;
+        const group = await this.groupService.groupForUser(admin, groupId);
+        if (group.permission === GroupAccessLevel.view) {
+            throw new ForbiddenException("You need to be a group owner or editor to modify participants");
+        }
+        const client = await this.groupService.getClientInGroup(group, clientId);
+        client.status = newStatus;
+        await client.save();
+        throw redirect('/admin/group/' + groupId);
     }
 }

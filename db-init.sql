@@ -6,14 +6,17 @@ CREATE table "Groups" (id serial primary key,
 	"updatedAt" timestamp not null default now()
 );
 
+create type "CLIENT_STATUS" as enum ('added', 'registered', 'suspended', 'deleted');
+
 create table "Clients" (id serial primary key,
-	"nickName" character varying not null,
-	token character varying not null,
+	"participantID" character varying not null,
+	token character varying null,
     "groupId" integer not null,
     foreign key ("groupId") references "Groups" (id),
+    "status" "CLIENT_STATUS" not null default 'added',
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now(),
-	unique key ("groupId", "nickName")
+	unique key ("groupId", "participantID")
 );
 
 create type "ADMIN_LEVEL" as enum ('normal', 'super');

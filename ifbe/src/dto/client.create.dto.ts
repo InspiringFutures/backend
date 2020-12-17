@@ -1,8 +1,8 @@
-import { IsInt, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 
-export class CreateClientDto {
+export class RegisterClientDto {
     @IsString()
-    readonly nickName: string;
+    readonly participantID: string;
 
     @IsString()
     readonly groupCode: string;
