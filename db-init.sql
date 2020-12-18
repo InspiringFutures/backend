@@ -10,7 +10,7 @@ create type "CLIENT_STATUS" as enum ('added', 'registered', 'suspended', 'delete
 
 create table "Clients" (id serial primary key,
 	"participantID" character varying not null,
-	token character varying null,
+	token character unique varying null,
     "groupId" integer not null,
     foreign key ("groupId") references "Groups" (id),
     "status" "CLIENT_STATUS" not null default 'added',
@@ -65,4 +65,15 @@ create table "JournalEntries" (id serial primary key,
     foreign key ("journalId") references "Journals" (id),
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now()
+);
+
+create type "TOKEN_TYPE" as enum ('reset');
+
+create table "Tokens" (id serial primary key,
+    "type" "TOKEN_TYPE" not null,
+    "code" character varying unique not null,
+    "for" character varying not null,
+	"createdAt" timestamp not null default now(),
+	"updatedAt" timestamp not null default now(),
+	"expiresAt" timestamp not null
 );

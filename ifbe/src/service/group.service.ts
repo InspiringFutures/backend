@@ -64,8 +64,6 @@ export class GroupService {
     }
 
     async addAdmin(group: Group, newUser: { permission: GroupAccessLevel; email: string }) {
-        //const user = await this.adminModel.findOne({where: {email: newUser.email}, rejectOnEmpty: true});
-        //const groupPermission = this.groupPermissionModel.upsert({groupId: })
         const existing = group.admins.find(a => a.email === newUser.email);
         if (existing) {
             existing.GroupPermission.level = newUser.permission;

@@ -28,9 +28,31 @@ export function wrap<T>(WrappedComponent: React.ComponentType<T>) {
 }
 
 export class UrlBuilder {
-    constructor(private readonly url: string) {};
-    build(path: string) {
-        return this.url + '/' + path;
+    constructor(private readonly url: string) {}
+    build(path: string, params?: {[key: string]: string}) {
+        const url = this.generateUrl(path, params);
+        return url.pathname + url.search;
+    }
+
+    absolute(path: string, params?: {[key: string]: string}) {
+        const url = this.generateUrl(path, params);
+        return url.href;
+    }
+
+    private generateUrl(path: string, params: { [p: string]: string }) {
+        const url = new URL(this.url);
+        if (path[0] === '/') {
+            url.pathname = path;
+        } else {
+            url.pathname += '/' + path;
+        }
+        if (params) {
+            Object.keys(params).forEach(key => {
+                const value = params[key];
+                url.searchParams.set(key, value);
+            });
+        }
+        return url;
     }
 }
 

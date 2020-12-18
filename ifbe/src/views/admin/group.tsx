@@ -62,17 +62,27 @@ const ClientRow = ({client, editable}: {client: Client; editable: boolean}) => {
             <input type="hidden" name="newStatus" value={newStatus} />
             <input type="submit" value={label} />
         </form>;
-    }
+    };
+
+    const resetForm = () => {
+        return <form
+          style={{display: "inline"}}
+          method="POST"
+          action={urlBuilder.build('client/' + client.id + '/reset')}>
+            <input type="submit" value="Reset Access" />
+        </form>;
+    };
 
     return <tr>
         <td>{client.participantID}</td>
-        <td>{client.status}
-        {editable && <>
+        <td>{client.status}</td>
+        <td>{editable && <>
             {client.status === CS.added && clientStatusForm(CS.deleted, 'Delete')}
             {client.status === CS.registered && clientStatusForm(CS.suspended, 'Suspend')}
             {client.status === CS.suspended && clientStatusForm(CS.registered, 'Reinstate')}
             {client.status === CS.deleted && clientStatusForm(CS.added, 'Restore')}
         </>}</td>
+        <td>{editable && resetForm()}</td>
     </tr>;
 };
 
@@ -92,7 +102,7 @@ const GroupView = wrap(({group}: Props) => {
     {owner && <p>You are an owner of this group.</p>}
     <h2>Participants</h2>
     <table>
-        <tr><th>Participant ID</th><th>Status</th></tr>
+        <tr><th>Participant ID</th><th>Status</th><th colSpan={2} /></tr>
         {clients.map(client => <ClientRow key={client.id} client={client} editable={editable} />)}
     </table>
     {clients.length === 0 && <em>There are currently no enrolled participants.</em>}

@@ -14,7 +14,7 @@ export const GroupAccessLevels = [GroupAccessLevel.view, GroupAccessLevel.edit, 
 @Table
 export class GroupPermission extends Model<GroupPermission> {
     @Default('normal')
-    @Column(DataTypes.ENUM(GroupAccessLevel.view, GroupAccessLevel.edit, GroupAccessLevel.owner))
+    @Column(DataTypes.ENUM(...GroupAccessLevels))
     level: GroupAccessLevel;
 
     @ForeignKey(() => Group)

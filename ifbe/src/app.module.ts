@@ -20,8 +20,10 @@ import { Journal } from "./model/journal.model";
 import { JournalEntry } from "./model/journalEntry.model";
 import { StorageService, StorageServiceProvider } from "./service/storage.service";
 import { ClientService } from './service/client.service';
+import { QRController } from './controller/qr.controller';
+import { Token } from './model/token.model';
 
-const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry];
+const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry, Token];
 const POSTGRES: SequelizeModuleOptions = {
     dialect: 'postgres',
     host: 'postgres',
@@ -61,7 +63,7 @@ class StorageModule {}
           }),
       }),
   ],
-  controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController],
+  controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController, QRController],
   providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider, ClientService],
 })
 export class AppModule {}

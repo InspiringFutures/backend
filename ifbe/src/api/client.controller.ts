@@ -1,23 +1,32 @@
 import {
     Body,
     Controller,
-    ForbiddenException,
+    ForbiddenException, Get,
     Headers,
     Injectable,
     NotFoundException,
     Param,
     Post,
-    Req,
+    Req, Res,
     UploadedFile,
     UseInterceptors,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { RegisterClientDto } from '../dto/client.create.dto';
 import { JournalContent, JournalService } from '../service/journal.service';
 import { ClientService } from '../service/client.service';
 import { GroupService } from '../service/group.service';
+import { Client } from '../model/client.model';
+import { extractGroupJoinDTO } from './group.controller';
+
+function extractNewClientDTO(client: Client) {
+    return {
+        id: client.id,
+        participantID: client.participantID,
+        token: client.token,
+    };
+}
 
 @Controller('api/client')
 @Injectable()
@@ -35,11 +44,29 @@ export class ClientController {
             throw new NotFoundException(clientDto.groupCode, 'Unknown group code');
         }
         const client = await this.clientService.register(group, clientDto.participantID);
-        return {
-            id: client.id,
-            participantID: client.participantID,
-            token: client.token,
-        };
+        return extractNewClientDTO(client);
+    }
+
+    @Get('reset/token/:token')
+    async consumeResetToken(@Param('token') token: string, @Headers('X-Requested-With') requestedWith: string, @Res() res) {
+        if (requestedWith && requestedWith.startsWith('Inspiring Futures App')) {
+            // Process the reset
+            const client = await this.clientService.processResetToken(token);
+            if (client) {
+                const group = await client.$get('group');
+                res.json({
+                    client: extractNewClientDTO(client),
+                    group: extractGroupJoinDTO(group),
+                });
+            } else {
+                res.status(400).json({
+                    error: 'Couldn\'t understand that reset token',
+                });
+            }
+        } else {
+            // Tell the user they need to scan the token on their phone.
+            res.render('client/resetTokenOutside', {resetURL: res.locals.url});
+        }
     }
 
     @Post(':id/journal')

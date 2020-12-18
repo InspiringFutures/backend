@@ -1,25 +1,17 @@
-import {
-    BadRequestException,
-    Body,
-    ForbiddenException,
-    Get,
-    Injectable,
-    Param,
-    Post,
-    Render,
-} from '@nestjs/common';
-import { InjectModel } from "@nestjs/sequelize";
+import { Body, ForbiddenException, Get, Injectable, Param, Post, Render } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { ValidationError } from 'sequelize';
 
 import { Controller, Page } from '../util/autopage';
-import { Admin, AdminLevel } from "../model/admin.model";
-import { NeedsAdmin, NeedsSuperAdmin } from "../util/guard";
-import { redirect } from "../util/redirect";
-import { UserService } from "../service/user.service";
-import { GroupService } from "../service/group.service";
-import { GroupAccessLevel } from "../model/groupPermission.model";
-import { getAll } from "../util/functional";
-import { ValidationError } from 'sequelize';
+import { Admin, AdminLevel } from '../model/admin.model';
+import { NeedsAdmin, NeedsSuperAdmin } from '../util/guard';
+import { redirect } from '../util/redirect';
+import { UserService } from '../service/user.service';
+import { GroupService } from '../service/group.service';
+import { GroupAccessLevel, GroupAccessLevels } from '../model/groupPermission.model';
+import { getAll } from '../util/functional';
 import { ClientStatus } from '../model/client.model';
+import { ClientService } from '../service/client.service';
 
 @Controller('admin')
 @Injectable()
@@ -29,6 +21,7 @@ export class AdminController {
         private adminModel: typeof Admin,
         private readonly userService: UserService,
         private readonly groupService: GroupService,
+        private readonly clientService: ClientService,
     ) {}
 
     @Page()
@@ -43,8 +36,7 @@ export class AdminController {
     @Get('group/:id')
     @NeedsAdmin
     async group(@Param('id') groupId) {
-        const admin = this.userService.currentUser()!;
-        const group = await this.groupService.groupForUser(admin, groupId);
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.view);
         return {
             group: {...group.get(), permission: group.permission, clients: getAll(group.clients), admins: getAll(group.admins)},
             protocol: 'foo'};
@@ -63,23 +55,16 @@ export class AdminController {
     @Render('admin/error')
     @NeedsAdmin
     async addAdmin(@Param('id') groupId, @Body('email') email: string, @Body('permission') permission: GroupAccessLevel) {
-        const admin = this.userService.currentUser()!;
-        const group = await this.groupService.groupForUser(admin, groupId);
-        if (group.permission !== GroupAccessLevel.owner) {
-            throw new ForbiddenException("You need to be a group owner to modify admins");
-        }
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.owner);
+
         await this.groupService.addAdmin(group,{email, permission});
-        if (admin !== null) {
-            throw redirect('/admin/group/' + groupId);
-        }
-        return {msg: "There was a problem adding " + email};
+        throw redirect('/admin/group/' + groupId);
     }
 
     @Post('add')
     @Render('admin/error')
     @NeedsSuperAdmin
     async createAdmin(@Body('email') email: string, @Body('superuser') superuser: boolean) {
-
         const admin = await this.adminModel.create({
                                                        email: email,
                                                        level: superuser ? AdminLevel.super : AdminLevel.normal,
@@ -94,11 +79,8 @@ export class AdminController {
     @Render('admin/error')
     @NeedsAdmin
     async addParticipants(@Param('id') groupId, @Body('participants') participants: string) {
-        const admin = this.userService.currentUser()!;
-        const group = await this.groupService.groupForUser(admin, groupId);
-        if (group.permission === GroupAccessLevel.view) {
-            throw new ForbiddenException("You need to be a group owner or editor to modify participants");
-        }
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.edit);
+
         const participantIDs = participants.split(/[\r\n]+/).map(p => p.trim());
         if (participantIDs.length === 0) {
             return {msg: "You must specify at least one participant ID"};
@@ -120,14 +102,42 @@ export class AdminController {
     @Render('admin/error')
     @NeedsAdmin
     async setClientStatus(@Param('id') groupId, @Param('clientId') clientId, @Body('newStatus') newStatus: ClientStatus) {
-        const admin = this.userService.currentUser()!;
-        const group = await this.groupService.groupForUser(admin, groupId);
-        if (group.permission === GroupAccessLevel.view) {
-            throw new ForbiddenException("You need to be a group owner or editor to modify participants");
-        }
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.edit);
         const client = await this.groupService.getClientInGroup(group, clientId);
         client.status = newStatus;
         await client.save();
         throw redirect('/admin/group/' + groupId);
+    }
+
+    @Post('group/:id/client/:clientId/reset')
+    @Render('admin/reset')
+    @NeedsAdmin
+    async resetClient(@Param('id') groupId, @Param('clientId') clientId, @Body('confirmed') confirmed: boolean) {
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.edit);
+        const client = await this.groupService.getClientInGroup(group, clientId);
+        if (!confirmed) {
+            return {participantID: client.participantID, confirmationNeeded: true};
+        }
+        const resetToken = await this.clientService.resetClient(client);
+        return {
+            resetToken: {code: resetToken.code, expiresAt: resetToken.expiresAt},
+            participantID: client.participantID,
+            group: {id: group.id, name: group.name},
+        };
+    }
+
+    private async hasGroupAccess(groupId: number, neededLevel: GroupAccessLevel) {
+        const admin = this.userService.currentUser()!;
+        const group = await this.groupService.groupForUser(admin, groupId);
+        const foundLevel = GroupAccessLevels.find(level => {
+            if (neededLevel === level) {
+                return true;
+            }
+            if (level === group.permission) {
+                throw new ForbiddenException("You need at least " + neededLevel + " to do that");
+            }
+            return false;
+        });
+        return group;
     }
 }

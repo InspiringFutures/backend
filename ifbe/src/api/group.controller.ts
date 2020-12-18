@@ -3,6 +3,10 @@ import { InjectModel } from "@nestjs/sequelize";
 
 import { Group } from "../model/group.model";
 
+export function extractGroupJoinDTO(group: Group) {
+    return { name: group.name, apiURL: group.apiURL, code: group.code };
+}
+
 @Controller('api/group')
 @Injectable()
 export class GroupController {
@@ -20,6 +24,6 @@ export class GroupController {
         if (group.apiURL === null) {
             group.apiURL = request.protocol + "://" + request.get('Host') + "/api/";
         }
-        return {name: group.name, apiURL: group.apiURL, code: group.code};
+        return extractGroupJoinDTO(group);
     }
 }
