@@ -25,4 +25,10 @@ export class Group extends Model<Group> {
 
     @HasMany(() => GroupPermission)
     permissions: GroupPermission[];
+
+    setApiURLfromRequestIfNotSet(request) {
+        if (this.apiURL === null) {
+            this.apiURL = request.protocol + '://' + request.get('Host') + '/api/';
+        }
+    }
 }

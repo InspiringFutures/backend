@@ -95,20 +95,31 @@ const GroupView = wrap(({group}: Props) => {
     clients.sort((a, b) => {
         return a.participantID.localeCompare(b.participantID);
     });
+    const anyAddedClients = clients.some(c => c.status === CS.added);
 
+    const groupCodeURL = urlBuilder.absolute(`/api/group/token/${group.code}`);
     return (<body>
     <h1>Group: {group.name}</h1>
     <p>Code: {group.code}</p>
+    <p>Group registration QR code<br /><img src={urlBuilder.build('/qr', {url: groupCodeURL})} /><br /><a href={groupCodeURL}>{groupCodeURL}</a></p>
     {owner && <p>You are an owner of this group.</p>}
     <h2>Participants</h2>
     <table>
-        <tr><th>Participant ID</th><th>Status</th><th colSpan={2} /></tr>
+        <tr>
+            <th>Participant ID</th>
+            <th>Status</th>
+            <th colSpan={2} />
+        </tr>
         {clients.map(client => <ClientRow key={client.id} client={client} editable={editable} />)}
     </table>
     {clients.length === 0 && <em>There are currently no enrolled participants.</em>}
+    {editable && anyAddedClients && <p><a href={urlBuilder.build('registrationSheet')}>
+        Generate sheet of initial registration QR codes
+    </a></p>}
     {editable && <form method="POST" action={urlBuilder.build('clients')}>
         <h3>Add new participants</h3>
-        <textarea name='participants' placeholder='Enter participant IDs, one per line' rows={6} cols={40}/>
+        <textarea name='participants' placeholder='Enter participant IDs, one per line' rows={6}
+                  cols={40} />
         <br />
         <input type="submit" value="Add Participants" />
     </form>}
@@ -116,7 +127,7 @@ const GroupView = wrap(({group}: Props) => {
     <ul>{group.admins.map(admin => <AdminRow key={admin.id} admin={admin} editable={owner} />)}</ul>
     {owner && <form method="POST" action={urlBuilder.build('admins')}>
         <label>Email: <input name="email" placeholder="Email address" /></label><br />
-        <PermissionSelector level={GroupAccessLevel.view}/>
+        <PermissionSelector level={GroupAccessLevel.view} />
         <input type="submit" value="Add" />
     </form>}
     </body>)

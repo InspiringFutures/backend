@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Group } from '../model/group.model';
 import { Client, ClientStatus } from '../model/client.model';
 import { Token, TokenType } from '../model/token.model';
+import { GroupService } from './group.service';
 
 const ONE_DAY = 1000 * 60 * 60 * 24;
 
@@ -12,22 +13,28 @@ export class ClientService {
     constructor(@InjectModel(Group) private groupModel: typeof Group,
                 @InjectModel(Client) private clientModel: typeof Client,
                 @InjectModel(Token) private tokenModel: typeof Token,
+                private groupService: GroupService,
     ) {}
 
-    async register(group: Group, participantID: string) {
+    async check(group: Group, participantID: string) {
         const client = await this.clientModel.findOne({where: {
-            participantID,
-            groupId: group.id,}});
+                participantID,
+                groupId: group.id,}});
         if (client) {
             if (client.status !== ClientStatus.added) {
                 throw new ForbiddenException('That participant is already registered.')
             }
-            client.token = uuidv4();
-            client.status = ClientStatus.registered;
-            return client.save();
+            return client;
         } else {
             throw new NotFoundException('Unknown participant ID');
         }
+    }
+
+    async register(group: Group, participantID: string) {
+        const client = await this.check(group, participantID);
+        client.token = uuidv4();
+        client.status = ClientStatus.registered;
+        return client.save();
     }
 
     async fetchRegisteredClient(clientId: number) {
@@ -54,6 +61,23 @@ export class ClientService {
         });
     }
 
+    async viewResetToken(resetToken: string) {
+        const token = await this.tokenModel.findOne({
+            where: {
+                type: TokenType.reset,
+                code: resetToken,
+            }
+        });
+
+        if (!token) return null;
+
+        if (new Date() > token.expiresAt) {
+            throw new ForbiddenException('That token has expired.');
+        }
+
+        return this.clientModel.findOne({where: {token: token.for}});
+    }
+
     async processResetToken(resetToken: string) {
         const token = await this.tokenModel.findOne({where: {
             type: TokenType.reset,
@@ -69,5 +93,11 @@ export class ClientService {
         await token.destroy();
 
         return this.clientModel.findOne({where: {token: token.for}});
+    }
+
+    async extractRegistrationToken(groupCode: string, participantId: string) {
+        const group = await this.groupService.groupFromCode(groupCode);
+        const client = await this.check(group, participantId);
+        return {group, client};
     }
 }

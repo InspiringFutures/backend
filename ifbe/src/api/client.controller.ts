@@ -28,6 +28,12 @@ function extractNewClientDTO(client: Client) {
     };
 }
 
+function extractCheckClientDTO(client: Client) {
+    return {
+        participantID: client.participantID,
+    };
+}
+
 @Controller('api/client')
 @Injectable()
 export class ClientController {
@@ -37,8 +43,19 @@ export class ClientController {
         private groupService: GroupService,
     ) {}
 
+    @Post('check')
+    async check(@Body() clientDto: RegisterClientDto, @Req() request) {
+        const group = await this.groupService.groupFromCode(clientDto.groupCode);
+        if (!group) {
+            throw new NotFoundException(clientDto.groupCode, 'Unknown group code');
+        }
+        const client = await this.clientService.check(group, clientDto.participantID);
+        return extractCheckClientDTO(client);
+    }
+
     @Post('')
     async register(@Body() clientDto: RegisterClientDto, @Req() request) {
+        console.log("Register", clientDto);
         const group = await this.groupService.groupFromCode(clientDto.groupCode);
         if (!group) {
             throw new NotFoundException(clientDto.groupCode, 'Unknown group code');
@@ -48,21 +65,55 @@ export class ClientController {
     }
 
     @Get('reset/token/:token')
-    async consumeResetToken(@Param('token') token: string, @Headers('X-Requested-With') requestedWith: string, @Res() res) {
+    async viewResetToken(@Param('token') token: string, @Headers('X-Requested-With') requestedWith: string, @Res() res, @Req() req) {
         if (requestedWith && requestedWith.startsWith('Inspiring Futures App')) {
             // Process the reset
-            const client = await this.clientService.processResetToken(token);
+            const client = await this.clientService.viewResetToken(token);
             if (client) {
                 const group = await client.$get('group');
                 res.json({
-                    client: extractNewClientDTO(client),
-                    group: extractGroupJoinDTO(group),
+                    client: extractCheckClientDTO(client),
+                    resetToken: token,
+                    group: extractGroupJoinDTO(group, req),
                 });
             } else {
                 res.status(400).json({
-                    error: 'Couldn\'t understand that reset token',
+                    error: 'Code already used or expired',
                 });
             }
+        } else {
+            // Tell the user they need to scan the token on their phone.
+            res.render('client/resetTokenOutside', {resetURL: res.locals.url});
+        }
+    }
+
+    @Post('reset/token/:token')
+    async consumeResetToken(@Param('token') token: string, @Res() res, @Req() req) {
+        // Process the reset
+        const client = await this.clientService.processResetToken(token);
+        if (client) {
+            const group = await client.$get('group');
+            res.json({
+                client: extractNewClientDTO(client),
+                group: extractGroupJoinDTO(group, req),
+            });
+        } else {
+            res.status(400).json({
+                error: 'Code already used or expired',
+            });
+        }
+    }
+
+    // Regexp has to be written this way (instead of just .*) to avoid some kind of filtering inside Express
+    @Get('registration/token/:groupCode/:participantID([^]+)')
+    async viewRegistrationToken(@Param('groupCode') groupCode: string, @Param('participantID') participantID: string, @Headers('X-Requested-With') requestedWith: string, @Res() res, @Req() req) {
+        if (requestedWith && requestedWith.startsWith('Inspiring Futures App')) {
+            // Process the reset
+            const {client, group} = await this.clientService.extractRegistrationToken(groupCode, participantID);
+            res.json({
+                client: extractCheckClientDTO(client),
+                group: extractGroupJoinDTO(group, req),
+            });
         } else {
             // Tell the user they need to scan the token on their phone.
             res.render('client/resetTokenOutside', {resetURL: res.locals.url});

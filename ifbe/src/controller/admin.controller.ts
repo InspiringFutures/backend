@@ -1,4 +1,13 @@
-import { Body, ForbiddenException, Get, Injectable, Param, Post, Render } from '@nestjs/common';
+import {
+    Body,
+    ForbiddenException,
+    Get,
+    Injectable,
+    Param,
+    Post,
+    Render,
+    Req,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { ValidationError } from 'sequelize';
 
@@ -35,11 +44,20 @@ export class AdminController {
     @Page('group')
     @Get('group/:id')
     @NeedsAdmin
-    async group(@Param('id') groupId) {
+    async group(@Param('id') groupId, @Req() req) {
         const group = await this.hasGroupAccess(groupId, GroupAccessLevel.view);
+        group.setApiURLfromRequestIfNotSet(req);
         return {
-            group: {...group.get(), permission: group.permission, clients: getAll(group.clients), admins: getAll(group.admins)},
-            protocol: 'foo'};
+            group: {...group.get(), permission: group.permission, clients: getAll(group.clients), admins: getAll(group.admins)}};
+    }
+
+    @Page('registrationSheet')
+    @Get('group/:id/registrationSheet')
+    @NeedsAdmin
+    async registrationSheet(@Param('id') groupId) {
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.edit);
+        return {
+            group: {...group.get(), permission: group.permission, clients: getAll(group.clients)}};
     }
 
     @Post('group')
