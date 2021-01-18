@@ -30,6 +30,7 @@
     "@types/react": "^16.9.56",
     "@types/validator": "^13.1.0",
     "aws-sdk": "^2.770.0",
+    "class-transformer": "^0.3.1",
     "class-validator": "^0.12.2",
     "express-react-views": "^0.11.0",
     "express-session": "^1.17.1",

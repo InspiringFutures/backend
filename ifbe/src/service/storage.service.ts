@@ -58,6 +58,7 @@ export class StorageService{
 const config: SwiftConfig = process.env.NODE_ENV === 'test' ? {
     url: 'http://ifbe_test:8050/auth/v1.0',
     user: 'test:tester',
+
     password: 'testing',
     container: 'client_media',
 } : {

@@ -53,7 +53,7 @@ const AdminRow = ({admin, editable}) => {
     </li>;
 };
 
-const ClientRow = ({client, editable}: {client: Client; editable: boolean}) => {
+const ClientRow = ({client, editable, clientURL}: {client: Client; editable: boolean, clientURL: string}) => {
     const urlBuilder = useUrlBuilder();
 
     const clientStatusForm = (newStatus, label) => {
@@ -74,7 +74,7 @@ const ClientRow = ({client, editable}: {client: Client; editable: boolean}) => {
     };
 
     return <tr>
-        <td>{client.participantID}</td>
+        <td><a href={clientURL}>{client.participantID}</a></td>
         <td>{client.status}</td>
         <td>{editable && <>
             {client.status === CS.added && clientStatusForm(CS.deleted, 'Delete')}
@@ -98,6 +98,11 @@ const GroupView = wrap(({group}: Props) => {
     const anyAddedClients = clients.some(c => c.status === CS.added);
 
     const groupCodeURL = urlBuilder.absolute(`/api/group/token/${group.code}`);
+
+    const clientURL = (client: Client) => {
+        return urlBuilder.build(`client/${client.id}`);
+    }
+
     return (<body>
     <h1>Group: {group.name}</h1>
     <p>Code: {group.code}</p>
@@ -110,7 +115,7 @@ const GroupView = wrap(({group}: Props) => {
             <th>Status</th>
             <th colSpan={2} />
         </tr>
-        {clients.map(client => <ClientRow key={client.id} client={client} editable={editable} />)}
+        {clients.map(client => <ClientRow key={client.id} client={client} clientURL={clientURL(client)} editable={editable} />)}
     </table>
     {clients.length === 0 && <em>There are currently no enrolled participants.</em>}
     {editable && anyAddedClients && <p><a href={urlBuilder.build('registrationSheet')}>

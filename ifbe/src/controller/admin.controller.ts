@@ -6,7 +6,7 @@ import {
     Param,
     Post,
     Render,
-    Req,
+    Req, Res,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { ValidationError } from 'sequelize';
@@ -21,6 +21,7 @@ import { GroupAccessLevel, GroupAccessLevels } from '../model/groupPermission.mo
 import { getAll } from '../util/functional';
 import { ClientStatus } from '../model/client.model';
 import { ClientService } from '../service/client.service';
+import { JournalService } from '../service/journal.service';
 
 @Controller('admin')
 @Injectable()
@@ -31,6 +32,7 @@ export class AdminController {
         private readonly userService: UserService,
         private readonly groupService: GroupService,
         private readonly clientService: ClientService,
+        private readonly journalService: JournalService,
     ) {}
 
     @Page()
@@ -49,6 +51,26 @@ export class AdminController {
         group.setApiURLfromRequestIfNotSet(req);
         return {
             group: {...group.get(), permission: group.permission, clients: getAll(group.clients), admins: getAll(group.admins)}};
+    }
+
+    @Get('group/:id/client/:clientId')
+    @Render('admin/client')
+    @NeedsAdmin
+    async viewClient(@Param('id') groupId, @Param('clientId') clientId) {
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.view);
+        const client = await this.groupService.getClientInGroup(group, clientId);
+        const journals = await this.clientService.getJournalEntries(client);
+        return {
+            group: {...group.get()}, client: {...client.get(), journals},
+        };
+    }
+
+    @Get('group/:id/client/:clientId/journal/:journalId/entry/:entryId/raw')
+    @NeedsAdmin
+    async viewEntry(@Param('id') groupId, @Param('clientId') clientId, @Param('journalId') journalId: number, @Param('entryId') entryId: number, @Res() response) {
+        const group = await this.hasGroupAccess(groupId, GroupAccessLevel.view);
+        const client = await this.groupService.getClientInGroup(group, clientId);
+        await this.journalService.getMedia(client, journalId, entryId, response);
     }
 
     @Page('registrationSheet')

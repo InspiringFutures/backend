@@ -1,5 +1,4 @@
 import { InjectModel } from "@nestjs/sequelize";
-import { Model } from 'sequelize-typescript';
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 
 import { Admin, AdminLevel } from "../model/admin.model";

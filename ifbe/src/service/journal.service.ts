@@ -62,10 +62,13 @@ export class JournalService {
         return journal;
     }
 
-    async getMedia(clientId: number, journalId: number, journalEntryId: number, target: Stream): Promise<void> {
-        const journal = await this.get(clientId, journalId);
+    async getMedia(client: Client|number, journalId: number, journalEntryId: number, target: Stream): Promise<void> {
+        const journal = await this.get(client, journalId);
 
-        const entry = journal.entries.find(entry => entry.id === journalEntryId);
+        const entry = journal.entries.find(entry => {
+            console.log(entry.id, journalEntryId, entry.id === journalEntryId, entry);
+            return entry.id === journalEntryId;
+        });
         if (!entry) {
             throw new NotFoundException("Unknown journal entry");
         }

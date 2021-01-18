@@ -6,6 +6,8 @@ import { Group } from '../model/group.model';
 import { Client, ClientStatus } from '../model/client.model';
 import { Token, TokenType } from '../model/token.model';
 import { GroupService } from './group.service';
+import { Journal } from '../model/journal.model';
+import { getAll } from '../util/functional';
 
 const ONE_DAY = 1000 * 60 * 60 * 24;
 
@@ -13,6 +15,7 @@ export class ClientService {
     constructor(@InjectModel(Group) private groupModel: typeof Group,
                 @InjectModel(Client) private clientModel: typeof Client,
                 @InjectModel(Token) private tokenModel: typeof Token,
+                @InjectModel(Journal) private journalModel: typeof Journal,
                 private groupService: GroupService,
     ) {}
 
@@ -99,5 +102,20 @@ export class ClientService {
         const group = await this.groupService.groupFromCode(groupCode);
         const client = await this.check(group, participantId);
         return {group, client};
+    }
+
+    async getJournalEntries(client: Client) {
+        const journals: Journal[] = await this.journalModel.findAll({where: {clientId: client.id}, include: [{all: true}]});
+        const raw = journals.map((journal) => {
+            return {
+                ...journal.get(),
+                entries: journal.entries.map(je => je.get()),
+            };
+        });
+        raw.sort((a, b) => {
+            // @ts-ignore
+            return a.createdAt - b.createdAt;
+        });
+        return raw;
     }
 }

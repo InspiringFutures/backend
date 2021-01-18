@@ -13,7 +13,7 @@ const ResetView = wrap((props: Props) => {
     const {participantID} = props;
 
     if (props.confirmationNeeded === true) {
-        const backButton = '<button onClick="() => history.back();">Go back</button>';
+        const backButton = '<button onClick="history.back()">Go back</button>';
         return (<body>
         <h1>Are you sure?</h1>
         <p>Please confirm that {participantID} has lost access to their device.</p>

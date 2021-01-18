@@ -3,13 +3,14 @@ import {
     BelongsTo,
     Column,
     Default,
-    ForeignKey,
+    ForeignKey, HasMany,
     Model,
     Table,
 } from 'sequelize-typescript';
 import { DataTypes } from 'sequelize';
 
 import { Group } from "./group.model";
+import { Journal } from './journal.model';
 
 export enum ClientStatus {
     added = 'added',
@@ -38,4 +39,7 @@ export class Client extends Model<Client> {
 
     @BelongsTo(() => Group)
     group: Group;
+
+    @HasMany(() => Journal)
+    journals: Journal[];
 }

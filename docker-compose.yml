@@ -37,11 +37,11 @@ services:
     networks:
       - webnet
     volumes:
-      - swift_data:/srv
+      - swift_data1:/srv
     ports:
       - 8055:8080
 networks:
   webnet:
 volumes:
   pgdata:
-  swift_data:
+  swift_data1:
