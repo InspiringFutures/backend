@@ -39,6 +39,7 @@
     "openstack-swift-client-region": "^2.2.0",
     "pg": "^8.4.0",
     "pg-hstore": "^2.3.3",
+    "pm2": "^4.5.1",
     "qrcode": "^1.4.4",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
