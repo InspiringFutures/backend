@@ -1,7 +1,7 @@
 {
     "apps" : [{
         "name" : "IFBE",
-        "script" : "ifbe/dist/main.js"
+        "script" : "dist/main.js"
     }],
     "deploy" : {
         "iftest" : {
