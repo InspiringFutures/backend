@@ -1,0 +1,16 @@
+{
+    "apps" : [{
+        "name" : "IFBE",
+        "script" : "ifbe/dist/main.js"
+    }],
+    "deploy" : {
+        "iftest" : {
+            "user" : "ubuntu",
+            "host" : "iftest.lambdacambridge.com",
+            "ref"  : "origin/main",
+            "repo" : "git@github.com:InspiringFutures/docker-stack-example.git",
+            "path" : "/home/ubuntu/app",
+            "post-deploy" : "cd ifbe && npm install && npm run build"
+        }
+    }
+}
