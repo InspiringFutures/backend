@@ -1,7 +1,7 @@
 CREATE table "Groups" (id serial primary key,
 	code character varying unique not null,
 	name character varying not null,
-	"apiUrl" character varying,
+	"apiURL" character varying,
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now()
 );
@@ -32,7 +32,7 @@ create table "Admins" (id serial primary key,
 
 create type "GROUP_ACCESS_LEVEL" as enum ('view', 'edit', 'owner');
 
-create table "GroupPermission" (id serial primary key,
+create table "GroupPermissions" (id serial primary key,
     "groupId" integer not null,
     foreign key ("groupId") references "Groups" (id),
     "adminId" integer not null,

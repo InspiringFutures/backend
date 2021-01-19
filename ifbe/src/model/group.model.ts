@@ -28,7 +28,7 @@ export class Group extends Model<Group> {
 
     setApiURLfromRequestIfNotSet(request) {
         if (this.apiURL === null) {
-            this.apiURL = request.protocol + '://' + request.get('Host') + '/api/';
+            this.apiURL = process.env.BASE_URL + '/api/';
         }
     }
 }
