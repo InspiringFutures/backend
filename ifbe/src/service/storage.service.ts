@@ -55,23 +55,14 @@ export class StorageService{
     }
 }
 
-const config: SwiftConfig = process.env.NODE_ENV === 'test' ? {
-    url: 'http://ifbe_test:8050/auth/v1.0',
-    user: 'test:tester',
-
-    password: 'testing',
-    container: 'client_media',
-} : {
-    url: 'http://ifbe_test:8055/auth/v1.0',
-    user: 'test:tester',
-    password: 'testing',
-    container: 'client_media',
-};
-
-
 export const StorageServiceProvider = {
     provide: StorageService,
     useFactory: async () => {
-        return new StorageService(config);
+        return new StorageService({
+            url: process.env.SWIFT_URL,
+            user: process.env.SWIFT_USER,
+            password: process.env.SWIFT_PASSWORD,
+            container: process.env.SWIFT_CONTAINER,
+        });
     },
 };

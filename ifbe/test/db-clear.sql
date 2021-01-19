@@ -1,3 +1,4 @@
+drop table if exists "Tokens";
 drop table if exists "JournalEntries";
 drop table if exists "Journals";
 drop table if exists "GroupPermission";
@@ -9,3 +10,4 @@ drop type if exists "GROUP_ACCESS_LEVEL";
 drop type if exists "ENTRY_TYPE";
 drop type if exists "JOURNAL_TYPE";
 drop type if exists "CLIENT_STATUS";
+drop type if exists "TOKEN_TYPE";

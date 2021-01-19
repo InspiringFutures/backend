@@ -66,7 +66,6 @@ export class JournalService {
         const journal = await this.get(client, journalId);
 
         const entry = journal.entries.find(entry => {
-            console.log(entry.id, journalEntryId, entry.id === journalEntryId, entry);
             return entry.id === journalEntryId;
         });
         if (!entry) {
@@ -77,7 +76,6 @@ export class JournalService {
     }
 
     async updateEntry(journal: Journal, url: string, upload: StorageItem) {
-        console.log("updateEntry", journal, url, upload);
         // Find the entry with the right URL(i.e. clientEntryId)
         const entry = journal.entries.find(entry => entry.clientEntryId === url);
         if (!entry) {
@@ -85,7 +83,6 @@ export class JournalService {
             throw new NotFoundException("Unknown journal entry");
         }
 
-        console.log("entry", entry);
         // Store the uploaded id in the entry
         entry.storageUrl = upload.id;
 
@@ -96,8 +93,6 @@ export class JournalService {
             'sequence': entry.sequence,
             'type': entry.type,
         });
-
-        console.log("metadata set");
 
         return await entry.save();
     }

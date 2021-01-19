@@ -28,7 +28,7 @@ export class RootController {
     @Get('status')
     async root() {
         const groupCount = await this.groupModel.count();
-        const authenticator = new SwiftClient.SwiftAuthenticator('http://swift:8055/auth/v1.0', 'test:tester', 'testing');
+        const authenticator = new SwiftClient.SwiftAuthenticator(process.env.SWIFT_URL, process.env.SWIFT_USER, process.env.SWIFT_PASSWORD);
         const swiftClient = new SwiftClient(authenticator);
 
         const swiftStatus = await swiftClient.info();

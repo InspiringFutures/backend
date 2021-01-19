@@ -1,3 +1,6 @@
+// Must come first.
+require('dotenv').config( {path: process.env.CONFIG_SOURCE});
+
 import { NestFactory, Reflector } from '@nestjs/core';
 import session from 'express-session';
 import {createEngine} from 'express-react-views';
@@ -15,7 +18,7 @@ const MemoryStore = createMemoryStore(session);
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.use(session({
-    secret: 'FIXME: This should be a server configured secret, not checked in!',
+    secret: process.env.SESSION_SECRET,
     store: new MemoryStore({
         checkPeriod: 86400000 // prune expired entries every 24h
     }),
@@ -28,7 +31,7 @@ async function bootstrap() {
   app.useGlobalFilters(new RedirectFilter());
   app.useGlobalGuards(new RolesGuard(app.get(Reflector)));
   app.use ((req, res, next) => {
-    res.locals.url = req.protocol + '://' + req.get('host') + req.originalUrl;
+    res.locals.url = process.env.BASE_URL + req.originalUrl;
     next();
   });
   app.useGlobalPipes(

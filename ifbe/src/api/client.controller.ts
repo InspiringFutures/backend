@@ -129,7 +129,6 @@ export class ClientController {
     @Post(':clientId/journal/:journalId/media')
     @UseInterceptors(FileInterceptor('upload'))
     async uploadMedia(@Param('clientId') clientId: number, @Param('journalId') journalId: number, @Headers('X-Token') token: string, @UploadedFile() upload, @Body('url') url: string) {
-        console.log("Got upload", clientId, journalId, token, upload, url);
         const client = await this.authenticateClient(clientId, token);
         const journal = await this.journalService.get(client, journalId);
 

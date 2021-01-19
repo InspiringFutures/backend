@@ -1,7 +1,7 @@
 CREATE table "Groups" (id serial primary key,
 	code character varying unique not null,
 	name character varying not null,
-	"apiURL" character varying,
+	"apiUrl" character varying,
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now()
 );
@@ -10,13 +10,13 @@ create type "CLIENT_STATUS" as enum ('added', 'registered', 'suspended', 'delete
 
 create table "Clients" (id serial primary key,
 	"participantID" character varying not null,
-	token character unique varying null,
+	token character varying unique null,
     "groupId" integer not null,
     foreign key ("groupId") references "Groups" (id),
     "status" "CLIENT_STATUS" not null default 'added',
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now(),
-	unique key ("groupId", "participantID")
+	unique ("groupId", "participantID")
 );
 
 create type "ADMIN_LEVEL" as enum ('normal', 'super');

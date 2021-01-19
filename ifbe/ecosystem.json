@@ -1,12 +1,15 @@
 {
     "apps" : [{
         "name" : "IFBE",
-        "script" : "dist/main.js"
+        "script" : "dist/main.js",
+        "env_qa": {
+            "CONFIG_SOURCE": "/data/qa.env"
+        }
     }],
     "deploy" : {
-        "iftest" : {
+        "qa" : {
             "user" : "ubuntu",
-            "host" : "iftest.lambdacambridge.com",
+            "host" : "ifqa.lambdacambridge.com",
             "ref"  : "origin/main",
             "repo" : "git@github.com:InspiringFutures/docker-stack-example.git",
             "path" : "/home/ubuntu/app",
