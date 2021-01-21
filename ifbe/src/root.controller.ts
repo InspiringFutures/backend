@@ -22,7 +22,7 @@ export class RootController {
         if (user) {
             throw redirect('/admin');
         }
-        throw redirect('/login');
+        throw redirect('/login?uncache=' + Date.now());
     }
 
     @Get('status')
