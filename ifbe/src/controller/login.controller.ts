@@ -34,7 +34,7 @@ export class LoginController {
                                                                    response_mode: 'form_post',
                                                                    nonce,
                                                                }),
-            "statusCode": 301,
+            "statusCode": 302,
         };
     }
 

@@ -15,7 +15,7 @@ export function redirect(url: string, statusCode: number = HttpStatus.SEE_OTHER)
 export class RedirectFilter implements ExceptionFilter {
     catch(exception: RedirectException, host: ArgumentsHost) {
         const res = host.switchToHttp().getResponse();
-        res.status(exception.getStatus()).redirect(exception.url);
+        res.redirect(exception.getStatus(), exception.url);
         return;
     }
 }
