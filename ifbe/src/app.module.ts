@@ -48,6 +48,10 @@ class StorageModule {}
           inject: [StorageService],
           useFactory: async (storageService: StorageService) => ({
               storage: storageService.multerStorage(),
+              limits: {
+                fieldSize: 100000000,
+                fileSize: 100000000,
+              },
           }),
       }),
   ],
