@@ -9,14 +9,16 @@ services:
       PG_DATA: /var/lib/postgresql/data
     ports:
       - 5430:5432
-  ifbe_test_swift:
-    image: morrisjobke/docker-swift-onlyone
-    environment:
-      SWIFT_DEFAULT_CONTAINER: client_media
-    ports:
-      - 8050:8080
+  ifbe_test_s3:
+    image: adobe/s3mock
     volumes:
-      - ifbe_test_swift_data:/srv
+      - ifbe_test_s3_data:/srv
+    environment:
+      initialBuckets: client_media
+      root: /srv
+    ports:
+      - 9097:9090
+
 volumes:
-  ifbe_test_swift_data:
+  ifbe_test_s3_data:
 

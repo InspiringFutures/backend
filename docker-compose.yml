@@ -31,17 +31,28 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db-init.sql:/docker-entrypoint-initdb.d/1-db-init.sql
     ports:
-      - 5432:5432
-  swift:
-    image: morrisjobke/docker-swift-onlyone
+      - 5115:5432
+#  swift:
+#    image: morrisjobke/docker-swift-onlyone
+#    networks:
+#      - webnet
+#    volumes:
+#      - swift_data1:/srv
+#    ports:
+#      - 8055:8080
+  s3:
+    image: adobe/s3mock
     networks:
       - webnet
     volumes:
-      - swift_data1:/srv
+      - s3_data:/srv
+    environment:
+      initialBuckets: client_media
+      root: /srv
     ports:
-      - 8055:8080
+      - 9090:9090
 networks:
   webnet:
 volumes:
   pgdata:
-  swift_data1:
+  s3_data:

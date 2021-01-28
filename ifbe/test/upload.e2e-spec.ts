@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { getConnectionToken } from "@nestjs/sequelize";
 import { Sequelize } from 'sequelize-typescript';
+import http, { IncomingHttpHeaders } from 'http';
 
 import request from 'supertest';
 
@@ -10,25 +11,21 @@ const fs = Promise.promisifyAll(require('fs'));
 
 import { AppModule } from '../src/app.module';
 import { JournalService } from "../src/service/journal.service";
-import { Stream } from "stream";
+
+const httpGet: (url: string) => Promise<{ body: string, headers: IncomingHttpHeaders }> = (url: string) => {
+  return new Promise((resolve, reject) => {
+    http.get(url, res => {
+      res.setEncoding('utf8');
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => resolve({body, headers: res.headers}));
+    }).on('error', reject);
+  });
+};
 
 async function runSQL(connection: Sequelize, path: string) {
     const data = await fs.readFileAsync(path);
-    return await connection.query(data.toString());
-}
-
-class StringStream extends Stream.Writable {
-    private chunks: Buffer[];
-    constructor() {
-        super();
-        this.chunks = [];
-    }
-    _write(chunk: any, encoding: string, callback: (error?: Error | null) => void) {
-        this.chunks.push(chunk);
-    }
-    asString() {
-        return Buffer.concat(this.chunks).toString('utf8');
-    }
+    return connection.query(data.toString());
 }
 
 describe('Uploads from clients (e2e)', () => {
@@ -125,9 +122,8 @@ describe('Uploads from clients (e2e)', () => {
         const journalEntryId = mediaResponse.body.id;
 
         const journalService = app.get(JournalService);
-        const stream = new StringStream();
-        await journalService.getMedia(1, journalId, journalEntryId, stream);
-        expect(stream.asString()).toEqual(TEST_MEDIA);
+        const mediaUrl = await journalService.getMediaUrl(1, journalId, journalEntryId);
+        expect((await httpGet(mediaUrl)).body).toEqual(TEST_MEDIA);
     });
 
     it('Multiple media upload', async () => {
@@ -149,16 +145,19 @@ describe('Uploads from clients (e2e)', () => {
             });
         const journalId = response.body.id;
 
-        const journalEntryIds = await Promise.map(ids, async id => ({id, journalEntryId: (await authClientPost(`journal/${journalId}/media`)
+      const xref = 'GROUP:PARTICIPANT:' + journalId + ':' + response.body.createdAt;
+      const journalEntryIds = await Promise.map(ids, async id => ({id, journalEntryId: (await authClientPost(`journal/${journalId}/media`)
             .field('url', url + id)
+            .field('xref', xref)
             .attach('upload', Buffer.from(TEST_MEDIA + id), 'ignore the filename')
             .expect(201)).body.id}));
 
         const journalService = app.get(JournalService);
         await Promise.all(journalEntryIds.map(async ({id, journalEntryId}) => {
-            const stream = new StringStream();
-            await journalService.getMedia(1, journalId, journalEntryId, stream);
-            expect(stream.asString()).toEqual(TEST_MEDIA + id);
+            const mediaUrl = await journalService.getMediaUrl(1, journalId, journalEntryId);
+          const response = await httpGet(mediaUrl);
+          expect(response.body).toEqual(TEST_MEDIA + id);
+          expect(response.headers['x-amz-meta-xref']).toEqual(xref);
         }));
     });
 });

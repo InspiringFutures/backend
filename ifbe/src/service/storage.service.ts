@@ -1,57 +1,52 @@
-import SwiftClient from 'openstack-swift-client-region';
-import { Stream } from 'stream';
+import aws from 'aws-sdk';
+import multerS3 from 'multer-s3';
 import { v4 as uuidv4 } from 'uuid';
 
-class MulterStorage {
-    constructor(private storage: StorageService) {}
-    _handleFile(req, file, cb) {
-        this.storage.put(file.stream)
-            .then(id => cb(null, {id}))
-            .catch(cb);
-    }
-
-    _removeFile(req, file, cb) {
-        this.storage.delete(file.id)
-            .then(() => cb())
-            .catch(cb);
-    }
-}
-
-interface SwiftConfig {
+interface S3Config {
     url: string;
-    user: string;
-    password: string;
+    accessKey: string;
+    accessSecret: string;
     container: string;
 }
 
 export class StorageService{
-    private container: SwiftClient.SwiftContainer;
-    constructor(config: SwiftConfig) {
-        const authenticator = new SwiftClient.SwiftAuthenticator(config.url, config.user, config.password);
-        const swiftClient = new SwiftClient(authenticator);
-        this.container = swiftClient.container(config.container);
+    private s3: aws.S3;
+    constructor(private config: S3Config) {
+        this.s3 = new aws.S3({
+            endpoint: config.url,
+            accessKeyId: config.accessKey,
+            secretAccessKey: config.accessSecret,
+            params: {
+                Bucket: config.container,
+            },
+        });
     }
 
-    async put(stream: Stream): Promise<string> {
-        const id = uuidv4();
-        await this.container.create(id, stream);
-        return id;
-    }
-
-    async getIntoStream(id: string, stream: Stream): Promise<void> {
-        await this.container.get(id, stream);
-    }
-
-    async delete(id: string): Promise<void> {
-        return await this.container.delete(id);
-    }
-
-    async setMetadata(id: string, meta: object): Promise<void> {
-        await this.container.update(id, meta);
+    async getSignedUrl(id: string): Promise<string> {
+        return await this.s3.getSignedUrlPromise('getObject', {Bucket: this.config.container, Key: id});
     }
 
     multerStorage() {
-        return new MulterStorage(this);
+        return multerS3({
+            s3: this.s3,
+            bucket: this.config.container,
+            metadata: function (req, file, cb) {
+                // CHECKME: These must align with ClientController#uploadMedia
+                const metadata: {clientId: string, journalId: string, xref?: string} = {clientId: req.params.clientId, journalId: req.params.journalId};
+                // Also store a xref from the client which is not trusted but might be useful if available
+                if (req.body.xref) {
+                    metadata.xref = req.body.xref;
+                }
+                cb(null, metadata);
+            },
+            key: function (req, file, cb) {
+                cb(null, uuidv4());
+            }
+        });
+    }
+
+    async status() {
+        return this.s3.headBucket({Bucket: this.config.container});
     }
 }
 
@@ -59,10 +54,10 @@ export const StorageServiceProvider = {
     provide: StorageService,
     useFactory: async () => {
         return new StorageService({
-            url: process.env.SWIFT_URL,
-            user: process.env.SWIFT_USER,
-            password: process.env.SWIFT_PASSWORD,
-            container: process.env.SWIFT_CONTAINER,
+            url: process.env.S3_URL,
+            accessKey: process.env.S3_ACCESS_KEY,
+            accessSecret: process.env.S3_ACCESS_SECRET,
+            container: process.env.S3_CONTAINER,
         });
     },
 };

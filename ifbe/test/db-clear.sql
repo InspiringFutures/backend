@@ -1,7 +1,7 @@
 drop table if exists "Tokens";
 drop table if exists "JournalEntries";
 drop table if exists "Journals";
-drop table if exists "GroupPermission";
+drop table if exists "GroupPermissions";
 drop table if exists "Clients";
 drop table if exists "Groups";
 drop table if exists "Admins";

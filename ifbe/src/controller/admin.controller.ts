@@ -70,7 +70,8 @@ export class AdminController {
     async viewEntry(@Param('id') groupId, @Param('clientId') clientId, @Param('journalId') journalId: number, @Param('entryId') entryId: number, @Res() response) {
         const group = await this.hasGroupAccess(groupId, GroupAccessLevel.view);
         const client = await this.groupService.getClientInGroup(group, clientId);
-        await this.journalService.getMedia(client, journalId, entryId, response);
+        const url = await this.journalService.getMediaUrl(client, journalId, entryId);
+        response.redirect(301, url);
     }
 
     @Page('registrationSheet')

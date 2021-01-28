@@ -1,6 +1,6 @@
 import { InjectModel } from "@nestjs/sequelize";
 import { NotFoundException } from "@nestjs/common";
-import { Stream } from "stream";
+import { Writable } from "stream";
 
 import { Client } from "../model/client.model";
 import { Take } from "../util/types";
@@ -23,7 +23,7 @@ export type JournalContent = (TextContent | MediaContent | AudioContent) & {clie
 export type JournalType = Take<JournalContent, 'type'>;
 
 interface StorageItem {
-    id: string;
+    key: string;
 }
 
 export class JournalService {
@@ -62,7 +62,7 @@ export class JournalService {
         return journal;
     }
 
-    async getMedia(client: Client|number, journalId: number, journalEntryId: number, target: Stream): Promise<void> {
+    async getMediaUrl(client: Client|number, journalId: number, journalEntryId: number): Promise<string> {
         const journal = await this.get(client, journalId);
 
         const entry = journal.entries.find(entry => {
@@ -72,7 +72,7 @@ export class JournalService {
             throw new NotFoundException("Unknown journal entry");
         }
 
-        await this.storageService.getIntoStream(entry.storageUrl, target);
+        return await this.storageService.getSignedUrl(entry.storageUrl);
     }
 
     async updateEntry(journal: Journal, url: string, upload: StorageItem) {
@@ -84,15 +84,7 @@ export class JournalService {
         }
 
         // Store the uploaded id in the entry
-        entry.storageUrl = upload.id;
-
-        await this.storageService.setMetadata(upload.id, {
-            'client-id': journal.clientId,
-            'journal-id': journal.id,
-            'journal-entry-id': entry.id,
-            'sequence': entry.sequence,
-            'type': entry.type,
-        });
+        entry.storageUrl = upload.key;
 
         return await entry.save();
     }
