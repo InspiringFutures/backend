@@ -26,7 +26,7 @@ export class Group extends Model<Group> {
     @HasMany(() => GroupPermission)
     permissions: GroupPermission[];
 
-    setApiURLfromRequestIfNotSet(request) {
+    setApiURLfromRequestIfNotSet() {
         if (this.apiURL === null) {
             this.apiURL = process.env.BASE_URL + '/api/';
         }

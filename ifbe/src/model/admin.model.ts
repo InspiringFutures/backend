@@ -1,13 +1,9 @@
-import {
-    AllowNull, BelongsToMany,
-    Column,
-    Default,
-    Model,
-    Table
-} from 'sequelize-typescript';
+import { AllowNull, BelongsToMany, Column, Default, Model, Table } from 'sequelize-typescript';
 import { DataTypes } from "sequelize";
 import { GroupPermission } from "./groupPermission.model";
 import { Group } from "./group.model";
+import { Survey } from "./survey.model";
+import { SurveyPermission } from "./surveyPermission.model";
 
 export enum AdminLevel {
     normal = 'normal',
@@ -33,4 +29,7 @@ export class Admin extends Model<Admin> {
 
     @BelongsToMany(() => Group, () => GroupPermission)
     groups: Array<Admin & {GroupPermission: GroupPermission}>;
+
+    @BelongsToMany(() => Survey, () => SurveyPermission)
+    surveys: Array<Admin & {SurveyPermission: SurveyPermission}>;
 }

@@ -1,11 +1,11 @@
 import * as React from 'react'
 import { Group } from "../../model/group.model";
-import { GroupAccessLevel, GroupAccessLevels } from "../../model/groupPermission.model";
 import { useUrlBuilder, wrap } from "../wrapper";
 import { Client, ClientStatus as CS } from '../../model/client.model';
+import { AccessLevel, AccessLevels } from "../../model/accessLevels";
 
 interface Props {
-    group: Group & {permission: GroupAccessLevel} & {admins: never};
+    group: Group & {permission: AccessLevel} & {admins: never};
 }
 
 const ClientRow = ({client, group}: {group: Group, client: Client;}) => {

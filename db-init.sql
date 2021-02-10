@@ -30,14 +30,14 @@ create table "Admins" (id serial primary key,
 	"lastLoginAt" timestamp null
 );
 
-create type "GROUP_ACCESS_LEVEL" as enum ('view', 'edit', 'owner');
+create type "ACCESS_LEVEL" as enum ('view', 'edit', 'owner');
 
 create table "GroupPermissions" (id serial primary key,
     "groupId" integer not null,
     foreign key ("groupId") references "Groups" (id),
     "adminId" integer not null,
     foreign key ("adminId") references "Admins" (id),
-	"level" "GROUP_ACCESS_LEVEL" not null default 'view',
+	"level" "ACCESS_LEVEL" not null default 'view',
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now()
 );
@@ -76,4 +76,32 @@ create table "Tokens" (id serial primary key,
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now(),
 	"expiresAt" timestamp not null
+);
+
+create table "Surveys" (id serial primary key,
+	name character varying not null,
+    content json not null default '{}', -- Latest version has its content put in here.
+    "updaterId" integer not null,
+    foreign key ("updaterId") references "Admins" (id),
+	"createdAt" timestamp not null default now(),
+	"updatedAt" timestamp not null default now()
+);
+
+create table "SurveyPermissions" (id serial primary key,
+    "surveyId" integer not null,
+    foreign key ("surveyId") references "Surveys" (id),
+    "adminId" integer not null,
+    foreign key ("adminId") references "Admins" (id),
+	"level" "ACCESS_LEVEL" not null default 'view',
+	"createdAt" timestamp not null default now(),
+	"updatedAt" timestamp not null default now()
+);
+
+create table "SurveyVersions" (id serial primary key,
+    "content" json not null,
+    "surveyId" integer not null,
+    foreign key ("surveyId") references "Surveys" (id),
+    "creatorId" integer not null,
+    foreign key ("creatorId") references "Admins" (id),
+	"createdAt" timestamp not null default now()
 );

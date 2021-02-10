@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { SequelizeModule } from '@nestjs/sequelize';
 import { MulterModule } from '@nestjs/platform-express';
 
 import { GroupController } from './api/group.controller';
@@ -22,8 +22,15 @@ import { StorageService, StorageServiceProvider } from './service/storage.servic
 import { ClientService } from './service/client.service';
 import { QRController } from './controller/qr.controller';
 import { Token } from './model/token.model';
+import { AppMiddleware } from "./util/app.middleware";
+import { Survey } from "./model/survey.model";
+import { SurveyVersion } from "./model/surveyVersion.model";
+import { SurveyPermission } from "./model/surveyPermission.model";
+import { SurveyService } from "./service/survey.service";
+import { SurveyController } from "./controller/survey.controller";
+import { GroupAdminController } from "./controller/groupAdmin.controller";
 
-const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry, Token];
+const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry, Token, Survey, SurveyPermission, SurveyVersion];
 
 @Module({
     providers: [StorageServiceProvider],
@@ -55,7 +62,13 @@ class StorageModule {}
           }),
       }),
   ],
-  controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController, QRController],
-  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider, ClientService],
+  controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController, QRController, SurveyController, GroupAdminController],
+  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider, ClientService, SurveyService],
 })
-export class AppModule {}
+export class AppModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer
+            .apply(AppMiddleware)
+            .forRoutes({ path: '*', method: RequestMethod.GET});
+    }
+}

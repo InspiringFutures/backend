@@ -4,7 +4,7 @@ import { InjectModel } from "@nestjs/sequelize";
 import { Group } from "../model/group.model";
 
 export function extractGroupJoinDTO(group: Group, request) {
-    group.setApiURLfromRequestIfNotSet(request);
+    group.setApiURLfromRequestIfNotSet();
     return { name: group.name, apiURL: group.apiURL, code: group.code };
 }
 

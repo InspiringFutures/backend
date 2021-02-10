@@ -4,11 +4,12 @@ import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Admin, AdminLevel } from "../model/admin.model";
 import { User } from "./user.service";
 import { Group } from "../model/group.model";
-import { GroupAccessLevel, GroupPermission } from "../model/groupPermission.model";
+import { GroupPermission } from "../model/groupPermission.model";
 import { Client, ClientStatus } from '../model/client.model';
 import { getOrElse } from "../util/functional";
+import { AccessLevel } from "../model/accessLevels";
 
-type GroupWithAccessLevel = Group & { permission: GroupAccessLevel };
+type GroupWithAccessLevel = Group & { permission: AccessLevel };
 
 export class GroupService {
     constructor(@InjectModel(Group) private groupModel: typeof Group,
@@ -27,10 +28,10 @@ export class GroupService {
          });
         return groups.map((g: GroupWithAccessLevel) => {
             const {admins} = g;
-            let permission = GroupAccessLevel.view;
+            let permission = AccessLevel.view;
             if (admins.length === 0) {
                 // Super-admin, so grant full permission
-                permission = GroupAccessLevel.owner;
+                permission = AccessLevel.owner;
             } else {
                 // There can only be one by the where clause above
                 if (admins[0].id !== admin.id) {
@@ -54,7 +55,7 @@ export class GroupService {
             throw new NotFoundException("No such group found");
         }
         // Check admin has access
-        const permission = admin.level === AdminLevel.super ? GroupAccessLevel.owner :
+        const permission = admin.level === AdminLevel.super ? AccessLevel.owner :
             getOrElse(group.admins.find(a => a.id === admin.id), () => {
                 throw new ForbiddenException("You do not have access to that group");
             }).GroupPermission.level;
@@ -62,11 +63,22 @@ export class GroupService {
         return group;
     }
 
-    async addAdmin(group: Group, newUser: { permission: GroupAccessLevel; email: string }) {
+    async addAdmin(group: Group, newUser: { permission: AccessLevel; email: string }) {
         const existing = group.admins.find(a => a.email === newUser.email);
         if (existing) {
-            existing.GroupPermission.level = newUser.permission;
-            await existing.GroupPermission.save();
+            // Check for at least one other owner
+            if (existing.GroupPermission.level === AccessLevel.owner) {
+                if (group.admins.filter(a => a.GroupPermission.level === AccessLevel.owner).length === 1) {
+                    throw new ForbiddenException("You cannot remove the only owner.")
+                }
+            }
+            console.log(existing, newUser);
+            if (!newUser.permission) {
+                await existing.GroupPermission.destroy();
+            } else {
+                existing.GroupPermission.level = newUser.permission;
+                await existing.GroupPermission.save();
+            }
         } else {
             const user = await this.adminModel.findOne({where: {email: newUser.email}, rejectOnEmpty: true});
             await this.groupPermissionModel.create({adminId: user.id, groupId: group.id, level: newUser.permission});
@@ -74,7 +86,7 @@ export class GroupService {
     }
 
     async createGroupForUser(user: User, values: {code: string; name: string}) {
-        return await this.groupModel.create({...values, permissions: [{adminId: user.id, level: GroupAccessLevel.owner}]},
+        return await this.groupModel.create({...values, permissions: [{adminId: user.id, level: AccessLevel.owner}]},
                                             {include: [{all: true}]});
     }
 

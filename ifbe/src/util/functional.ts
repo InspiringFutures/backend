@@ -5,7 +5,7 @@ export function getOrElse<T>(t: T | null, f: () => T): T {
     return t;
 }
 
-export function getAll<T>(things: Array<Model<T>>, expand?: (m: Model<T>) => any) {
+export function getAll<T extends Model<T>>(things: Array<T>, expand?: (m: T) => any) {
     return things.map(thing => {
         const result = thing.get();
         if (expand) {

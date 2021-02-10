@@ -1,21 +1,15 @@
-import { Column, Default, ForeignKey, HasMany, Model, Table } from 'sequelize-typescript';
+import { Column, Default, ForeignKey, Model, Table } from 'sequelize-typescript';
 
 import { Admin } from "./admin.model";
 import { Group } from "./group.model";
 import { DataTypes } from "sequelize";
-
-export enum GroupAccessLevel {
-    'view' = 'view',
-    'edit' = 'edit',
-    'owner' = 'owner'
-}
-export const GroupAccessLevels = [GroupAccessLevel.view, GroupAccessLevel.edit, GroupAccessLevel.owner];
+import { AccessLevel, AccessLevels } from "./accessLevels";
 
 @Table
 export class GroupPermission extends Model<GroupPermission> {
     @Default('normal')
-    @Column(DataTypes.ENUM(...GroupAccessLevels))
-    level: GroupAccessLevel;
+    @Column(DataTypes.ENUM(...AccessLevels))
+    level: AccessLevel;
 
     @ForeignKey(() => Group)
     @Column
