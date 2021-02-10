@@ -18,6 +18,8 @@ import RedoIcon from '@material-ui/icons/Redo';
 import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import FormatLineSpacingIcon from '@material-ui/icons/FormatLineSpacing';
+import TextFieldsIcon from '@material-ui/icons/TextFields';
 import ShortTextIcon from '@material-ui/icons/ShortText';
 
 import { RouteComponentProps } from "@reach/router";
@@ -190,7 +192,7 @@ const TextQuestionEditor: Editor<TextQuestion> = ({content, modify}) => {
     const classes = useStyles();
 
     return <Paper className={classes.contentItem}>
-        <Typography className={classes.editableWrapper}><ShortTextIcon />Text Question: <EditableText text={content.title} onSave={text => modify({...content, title: text!})} /></Typography>
+        <Typography className={classes.editableWrapper}><ShortTextIcon />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text!})} /></Typography>
         {content.description !== undefined && <Typography className={classes.editableWrapper}><div>Description:</div><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>}
         <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeHolder} onSave={text => modify({...content, placeHolder: text})} /></Typography>
@@ -207,6 +209,14 @@ const ContentEditor: Editor<Content> = ({content, modify}) => {
     const Editor = Editors[content.type];
     return <Editor content={content as any} modify={modify}/>;
 };
+
+const sidebarItems = [
+    {icon: <FormatLineSpacingIcon />, name: "Section", type: "SectionHeader"},
+    {icon: <TextFieldsIcon />, name: "Explanatory Text", type: "TextBlock"},
+    null,
+    {icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
+];
+
 
 export default function SurveyEditor({surveyId}: SurveyEditorProps) {
     const classes = useStyles();
@@ -261,20 +271,13 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                 <Toolbar />
                 <div className={classes.drawerContainer}>
                     <List>
-                        {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
-                            <ListItem button key={text}>
-                                <ListItemIcon>{index % 2 === 0 ? <InboxIcon /> : <MailIcon />}</ListItemIcon>
-                                <ListItemText primary={text} />
-                            </ListItem>
-                        ))}
-                    </List>
-                    <Divider />
-                    <List>
-                        {['All mail', 'Trash', 'Spam'].map((text, index) => (
-                            <ListItem button key={text}>
-                                <ListItemIcon>{index % 2 === 0 ? <InboxIcon /> : <MailIcon />}</ListItemIcon>
-                                <ListItemText primary={text} />
-                            </ListItem>
+                        {sidebarItems.map(item => (
+                            item ?
+                                <ListItem button key={item.type}>
+                                    <ListItemIcon>{item.icon}</ListItemIcon>
+                                    <ListItemText primary={item.name} />
+                                </ListItem>
+                            : <Divider />
                         ))}
                     </List>
                 </div>
