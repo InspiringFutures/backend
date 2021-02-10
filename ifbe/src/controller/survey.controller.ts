@@ -56,6 +56,13 @@ export class SurveyController {
         };
     }
 
+    @Get(':id/content')
+    @NeedsAdmin
+    async getContent(@Param('id') surveyId) {
+        const survey = await this.hasSurveyAccess(surveyId, AccessLevel.view);
+        return JSON.parse(survey.content);
+    }
+
     @Post(':id/admins')
     @Render('admin/error')
     @NeedsAdmin
