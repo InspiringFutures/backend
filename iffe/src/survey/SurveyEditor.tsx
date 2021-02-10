@@ -1,4 +1,5 @@
-import React, { FunctionComponent, useState } from 'react';
+import React, { forwardRef, FunctionComponent, useState } from 'react';
+import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
 import AppBar from '@material-ui/core/AppBar';
@@ -10,8 +11,6 @@ import Divider from '@material-ui/core/Divider';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
-import InboxIcon from '@material-ui/icons/MoveToInbox';
-import MailIcon from '@material-ui/icons/Mail';
 import SaveIcon from '@material-ui/icons/Save';
 import UndoIcon from '@material-ui/icons/Undo';
 import RedoIcon from '@material-ui/icons/Redo';
@@ -21,9 +20,11 @@ import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import FormatLineSpacingIcon from '@material-ui/icons/FormatLineSpacing';
 import TextFieldsIcon from '@material-ui/icons/TextFields';
 import ShortTextIcon from '@material-ui/icons/ShortText';
-
+import { DragHandle } from "@material-ui/icons";
 import { RouteComponentProps } from "@reach/router";
 import { Button, IconButton, Paper, TextareaAutosize } from "@material-ui/core";
+import {ulid} from "ulid";
+
 import {
     Content,
     SectionHeader,
@@ -44,9 +45,12 @@ const useStyles = makeStyles((theme: Theme) =>
         drawer: {
             width: drawerWidth,
             flexShrink: 0,
+            overflow: 'hidden',
         },
         drawerPaper: {
             width: drawerWidth,
+            overflow: 'hidden',
+            overflowY: 'hidden',
         },
         drawerContainer: {
             overflow: 'auto',
@@ -54,9 +58,14 @@ const useStyles = makeStyles((theme: Theme) =>
         content: {
             flexGrow: 1,
             padding: theme.spacing(3),
+            overflowY: 'scroll',
+            height: '100vh',
         },
         contentItem: {
+        },
+        editorContents: {
             padding: theme.spacing(1),
+            paddingTop: 0,
             marginBottom: theme.spacing(3),
         },
         editableInput: {
@@ -83,6 +92,14 @@ const useStyles = makeStyles((theme: Theme) =>
         placeholder: {
             color: '#777',
         },
+        dragHandle: {
+            background: '#fcfcfc',
+            textAlign: 'center',
+            color: '#eee',
+            '&:hover': {
+                color: '#777',
+            },
+        },
     }),
 );
 
@@ -107,7 +124,7 @@ type EditableTextProps = {
 };
 
 
-export const escapedNewLineToLineBreakTag = (string) => string.split('\n').map((item, index) => (index === 0) ? item : [<br key={index} />, item])
+export const escapedNewLineToLineBreakTag = (string: string) => string.split('\n').map((item: string, index: number) => (index === 0) ? item : [<br key={index} />, item])
 
 function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps) {
     const classes = useStyles();
@@ -128,6 +145,11 @@ function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps)
             if (placeHolder) {
                 onSave(undefined);
             } else {
+                if (text === undefined) {
+                    // Empty to start with
+                    setEditing(false);
+                    return;
+                }
                 alert("Cannot be empty.");
                 return;
             }
@@ -160,43 +182,42 @@ function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps)
             <IconButton onClick={save}><CheckCircleIcon /></IconButton>
         </>
     : multiLine ?
-            <div className={classes.editableMultiline}><div className={classes.editableMultilineContents} onDoubleClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</div><IconButton onClick={startEdit}><EditIcon /></IconButton></div>
+            <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onDoubleClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span><IconButton onClick={startEdit}><EditIcon /></IconButton></span>
     :
             <span className={classes.editableHolder} onDoubleClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}<IconButton onClick={startEdit}><EditIcon /></IconButton></span>;
 }
 
-type Editor<C extends Content> = FunctionComponent<{
+type EditorProps<C extends Content> = {
     content: C;
-    modify: (newContent: C) => void
-}>;
+    modify: (newContent: C) => void;
+};
+type Editor<C extends Content> = FunctionComponent<EditorProps<C>>;
 
 const SectionHeaderEditor: Editor<SectionHeader> = ({content, modify}) => {
     const classes = useStyles();
 
-    return <Paper className={classes.contentItem}>
-        <Typography variant="h4" className={classes.editableWrapper}>Section: <EditableText text={content.title} onSave={text => modify({...content, title: text!})} /></Typography>
-        <Typography className={classes.editableWrapper}><div>Description:</div><Spacer width={8} />
+    return <>
+        <Typography variant="h4" className={classes.editableWrapper}>Section: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description of this section" text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
-    </Paper>;
+    </>;
 };
 
 const TextBlockEditor: Editor<TextBlock> = ({content, modify}) => {
     const classes = useStyles();
 
-    return <Paper className={classes.contentItem}>
-        <Typography className={classes.editableWrapper}><div>Text:</div><Spacer width={8} /><EditableText multiLine text={content.title} onSave={text => modify({...content, title: text!})} /></Typography>
-    </Paper>;
+    return <Typography className={classes.editableWrapper}><span>Text:</span><Spacer width={8} /><EditableText multiLine text={content.title} onSave={text => modify({...content, title: text})} /></Typography>;
 };
 
 const TextQuestionEditor: Editor<TextQuestion> = ({content, modify}) => {
     const classes = useStyles();
 
-    return <Paper className={classes.contentItem}>
-        <Typography className={classes.editableWrapper}><ShortTextIcon />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text!})} /></Typography>
-        {content.description !== undefined && <Typography className={classes.editableWrapper}><div>Description:</div><Spacer width={8} />
-        <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>}
+    return <>
+        <Typography className={classes.editableWrapper}><ShortTextIcon />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
+        <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
         <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeHolder} onSave={text => modify({...content, placeHolder: text})} /></Typography>
-    </Paper>;
+    </>;
 };
 
 const Editors: {[name in Content["type"]]: Editor<any>} = {
@@ -205,16 +226,23 @@ const Editors: {[name in Content["type"]]: Editor<any>} = {
     "TextQuestion": TextQuestionEditor,
 };
 
-const ContentEditor: Editor<Content> = ({content, modify}) => {
-    const Editor = Editors[content.type];
-    return <Editor content={content as any} modify={modify}/>;
-};
+const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggableProps: any; dragHandleProps:any}>(({content, modify, draggableProps, dragHandleProps}, ref) => {
+    const classes = useStyles();
 
-const sidebarItems = [
-    {icon: <FormatLineSpacingIcon />, name: "Section", type: "SectionHeader"},
-    {icon: <TextFieldsIcon />, name: "Explanatory Text", type: "TextBlock"},
+    const Editor = Editors[content.type];
+    return <Paper className={classes.contentItem} ref={ref} {...draggableProps}>
+        <div className={classes.dragHandle} {...dragHandleProps}><DragHandle /></div>
+        <div className={classes.editorContents}>
+            <Editor content={content as any} modify={modify}/>
+        </div>
+    </Paper>;
+});
+
+const sidebarItems: ({index: number; icon: any; name: string; type: Content["type"]} | null)[] = [
+    {index: 0, icon: <FormatLineSpacingIcon />, name: "Section", type: "SectionHeader"},
+    {index: 1, icon: <TextFieldsIcon />, name: "Explanatory Text", type: "TextBlock"},
     null,
-    {icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
+    {index: 2, icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
 ];
 
 
@@ -227,11 +255,28 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
         {type: "SectionHeader", id: "a", title: "Welcome to Inspiring Futures", description: "We have some questions."},
         {type: "TextBlock", id: "b", title: "Here is some text"},
         {type: "TextQuestion", id: "c", title: "What is your name?", description: "Please give a name we can use to talk to you.\nHere is some text\nAnother line\nAnd another"},
-        {type: "SectionHeader", id: "a", title: "Welcome to Inspiring Futures"},
+        {type: "SectionHeader", id: "d", title: "Welcome to Inspiring Futures"},
     ]);
+    console.log(content);
+
+    function onDragEnd(drop: DropResult) {
+        console.log(drop);
+        if (drop.reason === 'CANCEL') {
+            return;
+        }
+        const newContent = content.slice();
+        if (drop.source.droppableId === "palette") {
+            const type = drop.draggableId as Content["type"];
+            newContent.splice(drop.destination?.index!, 0, {type, id: ulid()});
+        } else {
+            const removed = newContent.splice(drop.source.index, 1);
+            newContent.splice(drop.destination?.index!, 0, ...removed);
+        }
+        setContent(newContent);
+    }
 
     return (
-        <div className={classes.root}>
+        <DragDropContext onDragEnd={onDragEnd}><div className={classes.root}>
             <CssBaseline />
             <AppBar position="fixed" className={classes.appBar}>
                 <Toolbar>
@@ -252,14 +297,20 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                     </Button>
                 </Toolbar>
             </AppBar>
-            <main className={classes.content}>
-                <Toolbar />
-                {content.map((c, index) => <ContentEditor key={c.id} content={c} modify={(newC) => {
-                    const newContent = content.slice();
-                    newContent.splice(index, 1, newC);
-                    setContent(newContent);
-                }} />)}
-            </main>
+            <Droppable droppableId="main">
+                {(provided) =>
+                    <main className={classes.content} ref={provided.innerRef}>
+                        <Toolbar />
+                        {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index}>{(provided) =>
+                            <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
+                            const newContent = content.slice();
+                            newContent.splice(index, 1, newC);
+                            setContent(newContent);
+                        }} />}</Draggable>)}
+                        {provided.placeholder}
+                    </main>
+                }
+            </Droppable>
             <Drawer
                 className={classes.drawer}
                 variant="permanent"
@@ -270,18 +321,45 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
             >
                 <Toolbar />
                 <div className={classes.drawerContainer}>
-                    <List>
-                        {sidebarItems.map(item => (
-                            item ?
-                                <ListItem button key={item.type}>
-                                    <ListItemIcon>{item.icon}</ListItemIcon>
-                                    <ListItemText primary={item.name} />
-                                </ListItem>
-                            : <Divider />
-                        ))}
-                    </List>
+                    <Droppable droppableId="palette" isDropDisabled={true}>
+                        {provided =>
+                            <List ref={provided.innerRef}>
+                                {sidebarItems.map((item, index) => (
+                                    item ?
+                                        <Draggable key={item.type} draggableId={item.type}
+                                                   index={item.index}>
+                                            {(provided, snapshot) =>
+                                                snapshot.isDragging ?
+                                                    <>
+                                                        <ListItem button ref={provided.innerRef}
+                                                                  {...provided.draggableProps}
+                                                                  {...provided.dragHandleProps}>
+                                                            <ListItemIcon>{item.icon}</ListItemIcon>
+                                                            <ListItemText primary={item.name}/>
+                                                        </ListItem>
+                                                        <ListItem button>
+                                                            <ListItemIcon>{item.icon}</ListItemIcon>
+                                                            <ListItemText primary={item.name}/>
+                                                        </ListItem>
+                                                    </>
+                                                :
+                                                    <ListItem button ref={provided.innerRef}
+                                                              {...provided.draggableProps}
+                                                              {...provided.dragHandleProps}>
+                                                        <ListItemIcon>{item.icon}</ListItemIcon>
+                                                        <ListItemText primary={item.name}/>
+                                                    </ListItem>
+                                            }
+                                        </Draggable>
+                                        : <Divider key={index}/>
+                                ))}
+                                {provided.placeholder}
+                            </List>
+                        }
+                    </Droppable>
                 </div>
             </Drawer>
         </div>
+        </DragDropContext>
     );
 }
