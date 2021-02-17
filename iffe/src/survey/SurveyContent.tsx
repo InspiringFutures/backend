@@ -18,10 +18,14 @@ export interface TextQuestion extends Content {
     placeholder?: string;
 }
 
-type SurveyContent = SectionHeader | TextBlock | TextQuestion;
-
-export type SurveyContentTypes = {
-    SectionHeader: SectionHeader;
-    TextBlock: TextBlock;
-    TextQuestion: TextQuestion;
+export interface YesNoQuestion extends Content {
+    readonly type: "YesNoQuestion";
 }
+
+export interface ParagraphQuestion extends Content {
+    readonly type: "ParagraphQuestion";
+    placeholder?: string;
+}
+
+
+type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion;

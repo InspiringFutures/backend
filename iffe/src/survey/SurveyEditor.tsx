@@ -27,23 +27,32 @@ import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import FormatLineSpacingIcon from '@material-ui/icons/FormatLineSpacing';
 import TextFieldsIcon from '@material-ui/icons/TextFields';
 import ShortTextIcon from '@material-ui/icons/ShortText';
-import { DragHandle } from "@material-ui/icons";
+import DragHandle from "@material-ui/icons/DragHandle";
+import ThumbsUpDownIcon from '@material-ui/icons/ThumbsUpDown';
+import ViewHeadlineIcon from '@material-ui/icons/ViewHeadline';
+
 import { RouteComponentProps } from "@reach/router";
 import {
     Button,
     Dialog,
     DialogActions,
     DialogContent,
-    DialogContentText,
-    DialogTitle,
+    DialogTitle, FormControlLabel, FormLabel,
     IconButton,
-    Paper,
+    Paper, Radio, RadioGroup,
     TextareaAutosize,
     TextField
 } from "@material-ui/core";
 import { ulid } from "ulid";
 
-import { Content, SectionHeader, TextBlock, TextQuestion } from "./SurveyContent";
+import {
+    Content,
+    ParagraphQuestion,
+    SectionHeader,
+    TextBlock,
+    TextQuestion,
+    YesNoQuestion
+} from "./SurveyContent";
 
 const drawerWidth = 240;
 
@@ -262,11 +271,31 @@ const TextBlockEditor: Editor<TextBlock> = ({content, modify}) => {
 const TextQuestionEditor: Editor<TextQuestion> = ({content, modify}) => {
     const classes = useStyles();
 
-
     return <>
         <Typography className={classes.editableWrapper}><ShortTextIcon />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
+        <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
+    </>;
+};
+
+const YesNoQuestionEditor: Editor<YesNoQuestion> = ({content, modify}) => {
+    const classes = useStyles();
+
+    return <>
+        <Typography className={classes.editableWrapper}><ThumbsUpDownIcon />Yes/no question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
+        <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
+    </>;
+};
+
+const ParagraphQuestionEditor: Editor<ParagraphQuestion> = ({content, modify}) => {
+    const classes = useStyles();
+
+    return <>
+        <Typography className={classes.editableWrapper}><ViewHeadlineIcon />Paragraph question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
+            <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
         <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
     </>;
 };
@@ -294,16 +323,38 @@ const TextQuestionViewer: Viewer<TextQuestion> = ({content}) => {
     </>;
 };
 
+const YesNoQuestionViewer: Viewer<YesNoQuestion> = ({content}) => {
+    return <>
+        <FormLabel>{content.title}</FormLabel>
+        <RadioGroup>
+            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+            <FormControlLabel value="no" control={<Radio />} label="No" />
+        </RadioGroup>
+        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+    </>;
+};
+
+const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
+    return <>
+        <TextField label={content.title} placeholder={content.placeholder} fullWidth multiline rows={4} rowsMax={10} />
+        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+    </>;
+};
+
 const Editors: {[name in Content["type"]]: Editor<any>} = {
     "SectionHeader": SectionHeaderEditor,
     "TextBlock": TextBlockEditor,
     "TextQuestion": TextQuestionEditor,
+    "YesNoQuestion": YesNoQuestionEditor,
+    "ParagraphQuestion": ParagraphQuestionEditor,
 };
 
 const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "SectionHeader": SectionHeaderViewer,
     "TextBlock": TextBlockViewer,
     "TextQuestion": TextQuestionViewer,
+    "YesNoQuestion": YesNoQuestionViewer,
+    "ParagraphQuestion": ParagraphQuestionViewer,
 };
 
 const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggableProps: any; dragHandleProps:any}>(({content, modify, draggableProps, dragHandleProps}, ref) => {
@@ -336,6 +387,8 @@ const sidebarItems: ({index: number; icon: any; name: string; type: Content["typ
     {index: 1, icon: <TextFieldsIcon />, name: "Explanatory Text", type: "TextBlock"},
     null,
     {index: 2, icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
+    {index: 3, icon: <ThumbsUpDownIcon />, name: "Yes/no", type: "YesNoQuestion"},
+    {index: 4, icon: <ViewHeadlineIcon />, name: "Paragraph", type: "ParagraphQuestion"},
 ];
 
 interface EditorState {
@@ -434,24 +487,24 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
     // Load the survey!
     const [surveyInfo, setSurveyInfo] = useState<SurveyInfo>({name: "Survey " + surveyId});
     const [content, setContent] = useState<Content[]>([
-        {type: "SectionHeader", id: "a", title: "Welcome to Inspiring Futures", description: "We have some questions."},
-        {type: "TextBlock", id: "b", title: "Here is some text"},
-        {type: "TextQuestion", id: "c", title: "What is your name?", description: "Please give a name we can use to talk to you.\nHere is some text\nAnother line\nAnd another"},
-        {type: "SectionHeader", id: "d", title: "Welcome to Inspiring Futures"},
+        {"type":"SectionHeader","id":"01EYR3VD73T12BBNDCFXZJDF3F","title":"About the survey","description":"Different arts activities impact people in all sorts of ways depending on their circumstances, and often in unexpected ways. Some of these questions might seem like they don’t apply to your course, but they’ve all come from what other arts participants have said about their experiences. Please answer the questions as honestly as you can, and remember there is no right answer to any of the questions. Unless the question gives a specific time, you should answer for how you generally feel. You can add comments in the boxes or around the page if you would like to. \nThank you so much for taking part in this project. "},
+        {"type":"YesNoQuestion","id":"01EYR3VD73T12BBNDCFXZJDF3G","title":"Have you taken part in Arts courses before? (E.g. drama, music, painting, poetry etc.)"},
+        {"type":"ParagraphQuestion","id":"01EYR42PTTNAJTZM77FEZX950Y","title":"If yes, please tell us what else you have done"},
     ]);
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
     const previewDialog = useRef<MakeDialog>(null);
 
     console.log(content, JSON.stringify(content));
     function onDragEnd(drop: DropResult) {
-        console.log(drop);
         if (drop.reason === 'CANCEL') {
             return;
         }
         const newContent = content.slice();
         if (drop.source.droppableId === "palette") {
             const type = drop.draggableId as Content["type"];
-            newContent.splice(drop.destination?.index!, 0, {type, id: ulid()});
+            const newItem = {type, id: ulid()};
+            newContent.splice(drop.destination?.index!, 0, newItem);
+            editorDispatch({type: 'focus', on: newItem.id});
         } else {
             const removed = newContent.splice(drop.source.index, 1);
             newContent.splice(drop.destination?.index!, 0, ...removed);
