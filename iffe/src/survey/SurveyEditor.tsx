@@ -1,4 +1,4 @@
-import React, { forwardRef, FunctionComponent, useState } from 'react';
+import React, { forwardRef, FunctionComponent, useContext, useReducer, useState } from 'react';
 import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
@@ -22,7 +22,7 @@ import TextFieldsIcon from '@material-ui/icons/TextFields';
 import ShortTextIcon from '@material-ui/icons/ShortText';
 import { DragHandle } from "@material-ui/icons";
 import { RouteComponentProps } from "@reach/router";
-import { Button, IconButton, Paper, TextareaAutosize } from "@material-ui/core";
+import { Button, IconButton, Paper, TextareaAutosize, TextField } from "@material-ui/core";
 import {ulid} from "ulid";
 
 import {
@@ -108,6 +108,10 @@ const useStyles = makeStyles((theme: Theme) =>
                 color: '#777',
             },
         },
+        exampleAnswer: {
+            color: '#777',
+            borderBottom: 'dotted 1px #777',
+        },
     }),
 );
 
@@ -165,7 +169,7 @@ function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps)
             onSave(current);
         }
         setEditing(false);
-    }
+    };
 
     const handleKey = (e: React.KeyboardEvent) => {
         if (!multiLine && e.key === "Enter") {
@@ -173,26 +177,35 @@ function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps)
         } else if (e.key === "Escape") {
             cancel();
         }
-    }
+    };
+
+    const onBlur = () => {
+        setImmediate(() => setEditing((currentlyEditing) => {
+            if (currentlyEditing) {
+                save();
+            }
+            return false;
+        }));
+    };
 
     return isEditing ?
         <>
             {multiLine ?
                 <TextareaAutosize rowsMax={10} autoFocus className={classes.editableInput} value={current}
                       onChange={e => setCurrent(e.target.value)} onKeyUp={handleKey}
-                      placeholder={placeHolder}/>
+                      placeholder={placeHolder} onBlur={onBlur} />
                 :
                 <input autoFocus className={classes.editableInput} value={current}
                        onChange={e => setCurrent(e.target.value)} onKeyUp={handleKey}
-                       placeholder={placeHolder} />
+                       placeholder={placeHolder} onBlur={onBlur} />
             }
             <IconButton onClick={cancel}><CancelIcon /></IconButton>
             <IconButton onClick={save}><CheckCircleIcon /></IconButton>
         </>
     : multiLine ?
-            <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onDoubleClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span><IconButton onClick={startEdit}><EditIcon /></IconButton></span>
+            <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span><IconButton onClick={startEdit}><EditIcon /></IconButton></span>
     :
-            <span className={classes.editableHolder} onDoubleClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}<IconButton onClick={startEdit}><EditIcon /></IconButton></span>;
+            <span className={classes.editableHolder} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}<IconButton onClick={startEdit}><EditIcon /></IconButton></span>;
 }
 
 type EditorProps<C extends Content> = {
@@ -220,11 +233,38 @@ const TextBlockEditor: Editor<TextBlock> = ({content, modify}) => {
 const TextQuestionEditor: Editor<TextQuestion> = ({content, modify}) => {
     const classes = useStyles();
 
+
     return <>
         <Typography className={classes.editableWrapper}><ShortTextIcon />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
-        <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeHolder} onSave={text => modify({...content, placeHolder: text})} /></Typography>
+        <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
+    </>;
+};
+
+type ViewerProps<C extends Content> = {
+    content: C;
+};
+type Viewer<C extends Content> = FunctionComponent<ViewerProps<C>>;
+
+const SectionHeaderViewer: Viewer<SectionHeader> = ({content}) => {
+    return <>
+        <Typography variant="h4">{content.title}</Typography>
+        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+    </>;
+};
+
+const TextBlockViewer: Viewer<TextBlock> = ({content}) => {
+    return content.title ? <Typography>{escapedNewLineToLineBreakTag(content.title)}</Typography> : <em>Empty text block</em>;
+};
+
+const TextQuestionViewer: Viewer<TextQuestion> = ({content}) => {
+    const classes = useStyles();
+
+    return <>
+        <TextField label={content.title} placeholder={content.placeholder} fullWidth />
+        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        <Typography className={classes.exampleAnswer}>Short answer text</Typography>
     </>;
 };
 
@@ -234,14 +274,28 @@ const Editors: {[name in Content["type"]]: Editor<any>} = {
     "TextQuestion": TextQuestionEditor,
 };
 
+const Viewers: {[name in Content["type"]]: Viewer<any>} = {
+    "SectionHeader": SectionHeaderViewer,
+    "TextBlock": TextBlockViewer,
+    "TextQuestion": TextQuestionViewer,
+};
+
 const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggableProps: any; dragHandleProps:any}>(({content, modify, draggableProps, dragHandleProps}, ref) => {
     const classes = useStyles();
 
+    const {state: editorState, dispatch} = useContext(EditorContext);
+
     const Editor = Editors[content.type];
+    const Viewer = Viewers[content.type];
     return <Paper className={classes.contentItem} ref={ref} {...draggableProps}>
         <div className={classes.dragHandle} {...dragHandleProps}><DragHandle /></div>
         <div className={classes.editorContents}>
-            <Editor content={content as any} modify={modify}/>
+            {editorState.activeQuestion === content.id ?
+                <Editor content={content as any} modify={modify}/>
+            :   <div onClick={() => dispatch({type: 'focus', on: content.id})}>
+                    <Viewer content={content as any}/>
+                </div>
+            }
         </div>
     </Paper>;
 });
@@ -253,6 +307,27 @@ const sidebarItems: ({index: number; icon: any; name: string; type: Content["typ
     {index: 2, icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
 ];
 
+interface EditorState {
+    activeQuestion?: string;
+}
+type EditorAction =
+    | {type: 'focus'; on: string};
+
+function editorReducer(state: EditorState, action: EditorAction) {
+    switch (action.type) {
+        case "focus":
+            return {...state, activeQuestion: action.on};
+    }
+    return state;
+}
+interface EditorControl {
+    state: EditorState;
+    dispatch: (action: EditorAction) => void;
+}
+
+const EditorContext = React.createContext<EditorControl>({state: {}, dispatch: () => {
+    throw new Error("EditorContext used outside of provider");
+}});
 
 export default function SurveyEditor({surveyId}: SurveyEditorProps) {
     const classes = useStyles();
@@ -265,8 +340,9 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
         {type: "TextQuestion", id: "c", title: "What is your name?", description: "Please give a name we can use to talk to you.\nHere is some text\nAnother line\nAnd another"},
         {type: "SectionHeader", id: "d", title: "Welcome to Inspiring Futures"},
     ]);
-    console.log(content);
+    const [editorState, editorDispatch] = useReducer(editorReducer, {});
 
+    console.log(content);
     function onDragEnd(drop: DropResult) {
         console.log(drop);
         if (drop.reason === 'CANCEL') {
@@ -309,12 +385,14 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                 {(provided) =>
                     <main className={classes.content} ref={provided.innerRef}>
                         <Toolbar />
-                        {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index}>{(provided) =>
-                            <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
-                            const newContent = content.slice();
-                            newContent.splice(index, 1, newC);
-                            setContent(newContent);
-                        }} />}</Draggable>)}
+                        <EditorContext.Provider value={{state: editorState, dispatch: editorDispatch}}>
+                            {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index}>{(provided) =>
+                                <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
+                                const newContent = content.slice();
+                                newContent.splice(index, 1, newC);
+                                setContent(newContent);
+                            }} />}</Draggable>)}
+                        </EditorContext.Provider>
                         {provided.placeholder}
                     </main>
                 }

@@ -15,7 +15,7 @@ export interface TextBlock extends Content {
 
 export interface TextQuestion extends Content {
     readonly type: "TextQuestion";
-    placeHolder?: string;
+    placeholder?: string;
 }
 
 type SurveyContent = SectionHeader | TextBlock | TextQuestion;
