@@ -30,16 +30,18 @@ import ShortTextIcon from '@material-ui/icons/ShortText';
 import DragHandle from "@material-ui/icons/DragHandle";
 import ThumbsUpDownIcon from '@material-ui/icons/ThumbsUpDown';
 import ViewHeadlineIcon from '@material-ui/icons/ViewHeadline';
+import RadioButtonCheckedIcon from '@material-ui/icons/RadioButtonChecked';
 import GridOnIcon from '@material-ui/icons/GridOn';
 import DeleteIcon from '@material-ui/icons/Delete';
 
 import { RouteComponentProps } from "@reach/router";
 import {
     Button,
+    Checkbox,
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle,
+    DialogTitle, FormControl,
     FormControlLabel,
     FormLabel,
     IconButton,
@@ -52,7 +54,7 @@ import {
 import { ulid } from "ulid";
 
 import {
-    ChoiceGridQuestion,
+    ChoiceGridQuestion, ChoiceQuestion,
     Content,
     ParagraphQuestion,
     SectionHeader, SurveyContent,
@@ -400,6 +402,31 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
     </>;
 }
 
+const ChoiceQuestionEditor: Editor<ChoiceQuestion> = ({content, modify}) => {
+    const classes = useStyles();
+
+    return <>
+        <Typography className={classes.editableWrapper}><RadioButtonCheckedIcon className={classes.questionIcon}/>Choice question: <EditableText text={content.title} onSave={text => modify({
+            ...content,
+            title: text
+        })}/></Typography>
+        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8}/>
+            <EditableText multiLine
+                          placeHolder="Additional description that appears under this question."
+                          text={content.description}
+                          onSave={text => modify({...content, description: text})}/></Typography>
+        <div className={classes.choiceGridColumns}>
+            <div className={classes.choiceGridColumn}>
+                <EditableTextArray placeholder="Add choice" entries={content.choices || []} onSave={(choices) => modify({...content, choices})} />
+                <FormControlLabel
+                    control={<Checkbox checked={!!content.allowOther} onChange={(e) => modify({...content, allowOther: e.target.checked})} />}
+                    label={"Allow user to type an \"Other\" option"}
+                />
+            </div>
+        </div>
+    </>;
+};
+
 const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = ({content, modify}) => {
     const classes = useStyles();
 
@@ -467,6 +494,25 @@ const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
     </>;
 };
 
+
+const ChoiceQuestionViewer: Viewer<ChoiceQuestion> = ({content}) => {
+    const choices = content.choices || [];
+    const [value, setValue] = useState("");
+
+    let selectOther = () => setValue("other");
+    return <FormControl>
+        <FormLabel>{content.title}</FormLabel>
+        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        {choices.length > 0 ?
+            <RadioGroup value={value} onChange={(e) => setValue(e.currentTarget.value)}>
+                {choices.map((choice, index) => <FormControlLabel key={index} value={"c" + index} control={<Radio />} label={choice}/>)}
+                {content.allowOther && <FormControlLabel value="other" control={<Radio />} label={<span>Other: <TextField onClick={selectOther} onChange={selectOther} /></span>} />}
+            </RadioGroup>
+        :   <em>No rows/columns defined</em>
+        }
+    </FormControl>;
+};
+
 const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
     const rows = useMemo(() => content.rows || [], [content.rows]);
     const columns = content.columns || [];
@@ -523,6 +569,7 @@ const Editors: {[name in Content["type"]]: Editor<any>} = {
     "TextQuestion": TextQuestionEditor,
     "YesNoQuestion": YesNoQuestionEditor,
     "ParagraphQuestion": ParagraphQuestionEditor,
+    "ChoiceQuestion": ChoiceQuestionEditor,
     "ChoiceGridQuestion": ChoiceGridQuestionEditor,
 };
 
@@ -532,6 +579,7 @@ const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "TextQuestion": TextQuestionViewer,
     "YesNoQuestion": YesNoQuestionViewer,
     "ParagraphQuestion": ParagraphQuestionViewer,
+    "ChoiceQuestion": ChoiceQuestionViewer,
     "ChoiceGridQuestion": ChoiceGridQuestionViewer,
 };
 
@@ -567,7 +615,8 @@ const sidebarItems: ({index: number; icon: any; name: string; type: Content["typ
     {index: 2, icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
     {index: 3, icon: <ThumbsUpDownIcon />, name: "Yes/no", type: "YesNoQuestion"},
     {index: 4, icon: <ViewHeadlineIcon />, name: "Paragraph", type: "ParagraphQuestion"},
-    {index: 5, icon: <GridOnIcon />, name: "Choice grid", type: "ChoiceGridQuestion"},
+    {index: 5, icon: <RadioButtonCheckedIcon />, name: "Choice", type: "ChoiceQuestion"},
+    {index: 6, icon: <GridOnIcon />, name: "Choice grid", type: "ChoiceGridQuestion"},
 ];
 
 interface EditorState {

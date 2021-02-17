@@ -27,11 +27,17 @@ export interface ParagraphQuestion extends Content {
     placeholder?: string;
 }
 
+export interface ChoiceQuestion extends Content {
+    readonly type: "ChoiceQuestion";
+    choices?: string[];
+    allowOther?: boolean;
+}
+
 export interface ChoiceGridQuestion extends Content {
     readonly type: "ChoiceGridQuestion";
     rows?: string[];
-    columns?: string[]
+    columns?: string[];
 }
 
 
-export type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceGridQuestion;
+export type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion;
