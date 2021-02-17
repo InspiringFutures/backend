@@ -1,9 +1,16 @@
-import React, { forwardRef, FunctionComponent, useContext, useReducer, useState } from 'react';
+import React, {
+    forwardRef,
+    FunctionComponent,
+    useCallback,
+    useContext,
+    useReducer,
+    useRef,
+    useState
+} from 'react';
 import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
 import AppBar from '@material-ui/core/AppBar';
-import CssBaseline from '@material-ui/core/CssBaseline';
 import Toolbar from '@material-ui/core/Toolbar';
 import List from '@material-ui/core/List';
 import Typography from '@material-ui/core/Typography';
@@ -22,15 +29,21 @@ import TextFieldsIcon from '@material-ui/icons/TextFields';
 import ShortTextIcon from '@material-ui/icons/ShortText';
 import { DragHandle } from "@material-ui/icons";
 import { RouteComponentProps } from "@reach/router";
-import { Button, IconButton, Paper, TextareaAutosize, TextField } from "@material-ui/core";
-import {ulid} from "ulid";
-
 import {
-    Content,
-    SectionHeader,
-    TextBlock,
-    TextQuestion
-} from "./SurveyContent";
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    IconButton,
+    Paper,
+    TextareaAutosize,
+    TextField
+} from "@material-ui/core";
+import { ulid } from "ulid";
+
+import { Content, SectionHeader, TextBlock, TextQuestion } from "./SurveyContent";
 
 const drawerWidth = 240;
 
@@ -67,6 +80,10 @@ const useStyles = makeStyles((theme: Theme) =>
             padding: theme.spacing(1),
             paddingTop: 0,
             marginBottom: theme.spacing(3),
+        },
+        editableOuterWrapper: {
+            flexGrow: 1,
+            display: 'flex',
         },
         editableInput: {
             font: 'inherit',
@@ -138,38 +155,51 @@ type EditableTextProps = {
 
 export const escapedNewLineToLineBreakTag = (string: string) => string.split('\n').map((item: string, index: number) => (index === 0) ? item : [<br key={index} />, item])
 
+type EditableTextState = {isEditing: boolean; value?: string};
+type EditableTextAction =
+    | {type: "startEdit"}
+    | {type: "save"}
+    | {type: "cancel"}
+    | {type: "update"; value: string}
+    ;
+
 function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps) {
     const classes = useStyles();
-    const [isEditing, setEditing] = useState(false);
-    const [current, setCurrent] = useState(text ?? "");
-
-    const startEdit = () => {
-        setCurrent(text ?? "");
-        setEditing(true);
-    }
-
-    const cancel = () => {
-        setEditing(false);
-    };
-
-    const save = () => {
-        if (current === undefined || current === "") {
-            if (placeHolder) {
-                onSave(undefined);
-            } else {
-                if (text === undefined) {
-                    // Empty to start with
-                    setEditing(false);
-                    return;
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const [state, dispatch] = useReducer((current: EditableTextState, action: EditableTextAction) => {
+        switch (action.type) {
+            case 'startEdit':
+                return {isEditing: true, value: text ?? ""};
+            case 'save':
+                if (current.isEditing) {
+                    if (current.value === undefined || current.value === "") {
+                        if (placeHolder) {
+                            onSave(undefined);
+                        } else {
+                            if (text !== undefined) {
+                                // Not empty to start with
+                                alert("Cannot be empty.");
+                                return current;
+                            }
+                        }
+                    } else {
+                        onSave(current.value);
+                    }
                 }
-                alert("Cannot be empty.");
-                return;
-            }
-        } else {
-            onSave(current);
+                return {isEditing: false};
+            case 'cancel':
+                return {isEditing: false};
+            case 'update':
+                return {...current, value: action.value};
         }
-        setEditing(false);
-    };
+    }, {isEditing: false});
+
+    const startEdit = useCallback(() => dispatch({type: 'startEdit'}), []);
+    const save = useCallback(() => dispatch({type: 'save'}), []);
+    const cancel = useCallback(() => dispatch({type: 'cancel'}), []);
+    const setCurrent = useCallback((value: string) => {
+        dispatch({type: 'update', value});
+    }, []);
 
     const handleKey = (e: React.KeyboardEvent) => {
         if (!multiLine && e.key === "Enter") {
@@ -179,29 +209,28 @@ function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps)
         }
     };
 
-    const onBlur = () => {
-        setImmediate(() => setEditing((currentlyEditing) => {
-            if (currentlyEditing) {
-                save();
-            }
-            return false;
-        }));
+    const onBlur = (e: React.FocusEvent) => {
+        if (wrapperRef.current && wrapperRef.current.contains(e.nativeEvent.relatedTarget as Element)) {
+            // Inside, so ignore
+        } else {
+            save();
+        }
     };
 
-    return isEditing ?
-        <>
+    return state.isEditing ?
+        <span className={classes.editableOuterWrapper} ref={wrapperRef}>
             {multiLine ?
-                <TextareaAutosize rowsMax={10} autoFocus className={classes.editableInput} value={current}
+                <TextareaAutosize rowsMax={10} autoFocus className={classes.editableInput} value={state.value}
                       onChange={e => setCurrent(e.target.value)} onKeyUp={handleKey}
                       placeholder={placeHolder} onBlur={onBlur} />
                 :
-                <input autoFocus className={classes.editableInput} value={current}
+                <input autoFocus className={classes.editableInput} value={state.value}
                        onChange={e => setCurrent(e.target.value)} onKeyUp={handleKey}
                        placeholder={placeHolder} onBlur={onBlur} />
             }
             <IconButton onClick={cancel}><CancelIcon /></IconButton>
             <IconButton onClick={save}><CheckCircleIcon /></IconButton>
-        </>
+        </span>
     : multiLine ?
             <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span><IconButton onClick={startEdit}><EditIcon /></IconButton></span>
     :
@@ -259,12 +288,9 @@ const TextBlockViewer: Viewer<TextBlock> = ({content}) => {
 };
 
 const TextQuestionViewer: Viewer<TextQuestion> = ({content}) => {
-    const classes = useStyles();
-
     return <>
         <TextField label={content.title} placeholder={content.placeholder} fullWidth />
         {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
-        <Typography className={classes.exampleAnswer}>Short answer text</Typography>
     </>;
 };
 
@@ -300,6 +326,11 @@ const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggab
     </Paper>;
 });
 
+const ContentViewer =({content}: ViewerProps<Content>) => {
+    const Viewer = Viewers[content.type];
+    return <Viewer content={content as any}/>;
+};
+
 const sidebarItems: ({index: number; icon: any; name: string; type: Content["type"]} | null)[] = [
     {index: 0, icon: <FormatLineSpacingIcon />, name: "Section", type: "SectionHeader"},
     {index: 1, icon: <TextFieldsIcon />, name: "Explanatory Text", type: "TextBlock"},
@@ -329,6 +360,74 @@ const EditorContext = React.createContext<EditorControl>({state: {}, dispatch: (
     throw new Error("EditorContext used outside of provider");
 }});
 
+interface InjectedDialogProps {
+    isOpen: boolean;
+    open(): void;
+    close(): void;
+}
+
+interface MakeDialogProps {
+    children(props: InjectedDialogProps): JSX.Element;
+}
+
+interface MakeDialogState {
+    isOpen: boolean;
+}
+
+class MakeDialog extends React.Component<MakeDialogProps, MakeDialogState> {
+    state: MakeDialogState = {
+        isOpen: false,
+    };
+
+    open = () => {
+        this.setState({isOpen: true});
+    };
+
+    close = () => {
+        this.setState({isOpen: false});
+    };
+
+    render() {
+        return this.props.children({
+            isOpen: this.state.isOpen,
+            open: this.open,
+            close: this.close,
+        });
+    }
+}
+
+function PreviewDialog({isOpen, close, contents}: (InjectedDialogProps & {contents: Content[]})) {
+    const descriptionElementRef = React.useRef<HTMLElement>(null);
+    React.useEffect(() => {
+        if (isOpen) {
+            const { current: descriptionElement } = descriptionElementRef;
+            if (descriptionElement !== null) {
+                descriptionElement.focus();
+            }
+        }
+    }, [isOpen]);
+
+    return (
+            <Dialog
+                open={isOpen}
+                onClose={close}
+                scroll="paper"
+                aria-labelledby="scroll-dialog-title"
+                aria-describedby="scroll-dialog-description"
+            >
+                <DialogTitle id="scroll-dialog-title">Preview</DialogTitle>
+                <DialogContent dividers>
+                    {contents.map(content => <ContentViewer key={content.id} content={content} />)}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={close} color="primary">
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+    );
+}
+
 export default function SurveyEditor({surveyId}: SurveyEditorProps) {
     const classes = useStyles();
 
@@ -341,8 +440,9 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
         {type: "SectionHeader", id: "d", title: "Welcome to Inspiring Futures"},
     ]);
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
+    const previewDialog = useRef<MakeDialog>(null);
 
-    console.log(content);
+    console.log(content, JSON.stringify(content));
     function onDragEnd(drop: DropResult) {
         console.log(drop);
         if (drop.reason === 'CANCEL') {
@@ -361,13 +461,17 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
 
     return (
         <DragDropContext onDragEnd={onDragEnd}><div className={classes.root}>
-            <CssBaseline />
+            <MakeDialog ref={previewDialog}>{({isOpen, open, close}) => <PreviewDialog isOpen={isOpen} open={open} close={close} contents={content} />}</MakeDialog>
             <AppBar position="fixed" className={classes.appBar}>
                 <Toolbar>
                     <Typography variant="h6" noWrap>
                         {surveyInfo.name}
                     </Typography>
                     <Spacer />
+                    <Button variant="contained" onClick={() => previewDialog.current && previewDialog.current.open()}>
+                        Preview
+                    </Button>
+                    <Spacer width={16} />
                     <Button variant="contained" startIcon={<UndoIcon />}>
                         Undo
                     </Button>
@@ -390,7 +494,8 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                                 <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
                                 const newContent = content.slice();
                                 newContent.splice(index, 1, newC);
-                                setContent(newContent);
+                                // Buggy fix for now!
+                                setImmediate(() => setContent(newContent));
                             }} />}</Draggable>)}
                         </EditorContext.Provider>
                         {provided.placeholder}
