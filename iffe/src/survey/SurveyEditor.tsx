@@ -80,11 +80,19 @@ const useStyles = makeStyles((theme: Theme) =>
         editableHolder: {
             paddingTop: 3,
             paddingLeft: 4,
+            border: 'solid 1px transparent',
+            '&:hover': {
+                borderColor: theme.palette.primary.light,
+            },
         },
         editableMultiline: {
             flexGrow: 1,
             display: 'flex',
             alignItems: 'start',
+            border: 'solid 1px transparent',
+            '&:hover': {
+                borderColor: theme.palette.primary.light,
+            },
         },
         editableMultilineContents: {
             flexGrow: 1,
@@ -95,7 +103,7 @@ const useStyles = makeStyles((theme: Theme) =>
         dragHandle: {
             background: '#fcfcfc',
             textAlign: 'center',
-            color: '#eee',
+            color: '#ddd',
             '&:hover': {
                 color: '#777',
             },
