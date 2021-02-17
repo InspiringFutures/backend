@@ -30,6 +30,7 @@ import ShortTextIcon from '@material-ui/icons/ShortText';
 import DragHandle from "@material-ui/icons/DragHandle";
 import ThumbsUpDownIcon from '@material-ui/icons/ThumbsUpDown';
 import ViewHeadlineIcon from '@material-ui/icons/ViewHeadline';
+import GridOnIcon from '@material-ui/icons/GridOn';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -37,15 +38,20 @@ import {
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle, FormControlLabel, FormLabel,
+    DialogTitle,
+    FormControlLabel,
+    FormLabel,
     IconButton,
-    Paper, Radio, RadioGroup,
+    Paper,
+    Radio,
+    RadioGroup,
     TextareaAutosize,
     TextField
 } from "@material-ui/core";
 import { ulid } from "ulid";
 
 import {
+    ChoiceGridQuestion,
     Content,
     ParagraphQuestion,
     SectionHeader,
@@ -137,6 +143,12 @@ const useStyles = makeStyles((theme: Theme) =>
         exampleAnswer: {
             color: '#777',
             borderBottom: 'dotted 1px #777',
+        },
+        choiceGridColumns: {
+            display: 'flex',
+        },
+        choiceGridColumn: {
+            flexGrow: 1,
         },
     }),
 );
@@ -295,8 +307,63 @@ const ParagraphQuestionEditor: Editor<ParagraphQuestion> = ({content, modify}) =
     return <>
         <Typography className={classes.editableWrapper}><ViewHeadlineIcon />Paragraph question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
-            <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
+        <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
         <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
+    </>;
+};
+
+interface EditableTextArrayProps {
+    onSave: (newEntries: string[]) => void;
+    entries: string[];
+    placeholder: string;
+}
+
+function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProps) {
+    return <>
+        {entries.map((entry, index) => {
+            return <EditableText key={entry} text={entry} onSave={(text) => {
+                const newEntries = [...entries];
+                if (text === undefined) {
+                    newEntries.splice(index, 1);
+                } else {
+                    newEntries.splice(index, 1, text);
+                }
+                onSave(newEntries);
+            }}/>
+        })}
+        <EditableText placeHolder={placeholder} onSave={(text) => {
+            if (text) {
+                const newEntries = [...entries, text];
+                onSave(newEntries);
+            }
+        }}/>
+    </>;
+}
+
+const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = ({content, modify}) => {
+    const classes = useStyles();
+
+    return <>
+        <Typography className={classes.editableWrapper}><ThumbsUpDownIcon/>Yes/no
+            question: <EditableText text={content.title} onSave={text => modify({
+                ...content,
+                title: text
+            })}/></Typography>
+        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8}/>
+            <EditableText multiLine
+                          placeHolder="Additional description that appears under this question."
+                          text={content.description}
+                          onSave={text => modify({...content, description: text})}/></Typography>
+        <div className={classes.choiceGridColumns}>
+            <div className={classes.choiceGridColumn}>
+                <h4>Rows</h4>
+                <EditableTextArray placeholder="Add row" entries={content.rows || []} onSave={(rows) => modify({...content, rows})} />
+            </div>
+            <div className={classes.choiceGridColumn}>
+                <h4>Columns</h4>
+                <EditableTextArray placeholder="Add column" entries={content.columns || []} onSave={(columns) => modify({...content, columns})} />
+            </div>
+        </div>
     </>;
 };
 
@@ -341,12 +408,20 @@ const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
     </>;
 };
 
+const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
+    return <>
+        <FormLabel>{content.title}</FormLabel>
+        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+    </>;
+};
+
 const Editors: {[name in Content["type"]]: Editor<any>} = {
     "SectionHeader": SectionHeaderEditor,
     "TextBlock": TextBlockEditor,
     "TextQuestion": TextQuestionEditor,
     "YesNoQuestion": YesNoQuestionEditor,
     "ParagraphQuestion": ParagraphQuestionEditor,
+    "ChoiceGridQuestion": ChoiceGridQuestionEditor,
 };
 
 const Viewers: {[name in Content["type"]]: Viewer<any>} = {
@@ -355,6 +430,7 @@ const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "TextQuestion": TextQuestionViewer,
     "YesNoQuestion": YesNoQuestionViewer,
     "ParagraphQuestion": ParagraphQuestionViewer,
+    "ChoiceGridQuestion": ChoiceGridQuestionViewer,
 };
 
 const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggableProps: any; dragHandleProps:any}>(({content, modify, draggableProps, dragHandleProps}, ref) => {
@@ -389,6 +465,7 @@ const sidebarItems: ({index: number; icon: any; name: string; type: Content["typ
     {index: 2, icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
     {index: 3, icon: <ThumbsUpDownIcon />, name: "Yes/no", type: "YesNoQuestion"},
     {index: 4, icon: <ViewHeadlineIcon />, name: "Paragraph", type: "ParagraphQuestion"},
+    {index: 5, icon: <GridOnIcon />, name: "Choice grid", type: "ChoiceGridQuestion"},
 ];
 
 interface EditorState {

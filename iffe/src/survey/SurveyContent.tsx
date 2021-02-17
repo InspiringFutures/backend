@@ -27,5 +27,11 @@ export interface ParagraphQuestion extends Content {
     placeholder?: string;
 }
 
+export interface ChoiceGridQuestion extends Content {
+    readonly type: "ChoiceGridQuestion";
+    rows?: string[];
+    columns?: string[]
+}
 
-type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion;
+
+type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceGridQuestion;
