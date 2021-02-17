@@ -3,6 +3,7 @@ import React, {
     FunctionComponent,
     useCallback,
     useContext,
+    useEffect, useMemo,
     useReducer,
     useRef,
     useState
@@ -21,7 +22,6 @@ import ListItemText from '@material-ui/core/ListItemText';
 import SaveIcon from '@material-ui/icons/Save';
 import UndoIcon from '@material-ui/icons/Undo';
 import RedoIcon from '@material-ui/icons/Redo';
-import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import FormatLineSpacingIcon from '@material-ui/icons/FormatLineSpacing';
@@ -31,6 +31,7 @@ import DragHandle from "@material-ui/icons/DragHandle";
 import ThumbsUpDownIcon from '@material-ui/icons/ThumbsUpDown';
 import ViewHeadlineIcon from '@material-ui/icons/ViewHeadline';
 import GridOnIcon from '@material-ui/icons/GridOn';
+import DeleteIcon from '@material-ui/icons/Delete';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -54,7 +55,7 @@ import {
     ChoiceGridQuestion,
     Content,
     ParagraphQuestion,
-    SectionHeader,
+    SectionHeader, SurveyContent,
     TextBlock,
     TextQuestion,
     YesNoQuestion
@@ -99,6 +100,7 @@ const useStyles = makeStyles((theme: Theme) =>
         editableOuterWrapper: {
             flexGrow: 1,
             display: 'flex',
+            border: 'solid 1px transparent',
         },
         editableInput: {
             font: 'inherit',
@@ -110,9 +112,8 @@ const useStyles = makeStyles((theme: Theme) =>
             alignItems: 'baseline',
         },
         editableHolder: {
-            paddingTop: 3,
-            paddingLeft: 4,
             border: 'solid 1px transparent',
+            flexGrow: 1,
             '&:hover': {
                 borderColor: theme.palette.primary.light,
             },
@@ -148,7 +149,29 @@ const useStyles = makeStyles((theme: Theme) =>
             display: 'flex',
         },
         choiceGridColumn: {
+            width: '50%',
+            display: 'flex',
+            flexDirection: 'column',
+        },
+        editableTextArrayDraggable: {
+            display: 'flex',
             flexGrow: 1,
+        },
+        editableTextArrayDragHandle: {
+            alignSelf: 'center',
+        },
+        questionIcon: {
+            transform: 'translateY(5px)',
+        },
+        editableInlineButton: {
+            alignSelf: 'center',
+        },
+        editableTextArrayAddRow: {
+            display: 'flex',
+        },
+        editableTextArrayAddText: {
+            paddingTop: 5,
+            paddingBottom: 5,
         },
     }),
 );
@@ -171,6 +194,8 @@ type EditableTextProps = {
     onSave: (newText: string | undefined) => void;
     multiLine?: boolean;
     placeHolder?: string;
+    onDelete?: () => void;
+    holderClassName?: string;
 };
 
 
@@ -184,7 +209,7 @@ type EditableTextAction =
     | {type: "update"; value: string}
     ;
 
-function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps) {
+function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderClassName}: EditableTextProps) {
     const classes = useStyles();
     const wrapperRef = useRef<HTMLDivElement>(null);
     const [state, dispatch] = useReducer((current: EditableTextState, action: EditableTextAction) => {
@@ -198,9 +223,13 @@ function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps)
                             onSave(undefined);
                         } else {
                             if (text !== undefined) {
-                                // Not empty to start with
-                                alert("Cannot be empty.");
-                                return current;
+                                if (onDelete) {
+                                    onDelete();
+                                } else {
+                                    // Not empty to start with
+                                    alert("Cannot be empty.");
+                                    return current;
+                                }
                             }
                         }
                     } else {
@@ -249,13 +278,13 @@ function EditableText({text, onSave, multiLine, placeHolder}: EditableTextProps)
                        onChange={e => setCurrent(e.target.value)} onKeyUp={handleKey}
                        placeholder={placeHolder} onBlur={onBlur} />
             }
-            <IconButton onClick={cancel}><CancelIcon /></IconButton>
-            <IconButton onClick={save}><CheckCircleIcon /></IconButton>
+            <IconButton className={classes.editableInlineButton} onClick={cancel}><CancelIcon /></IconButton>
+            <IconButton className={classes.editableInlineButton} onClick={save}><CheckCircleIcon /></IconButton>
         </span>
     : multiLine ?
-            <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span><IconButton onClick={startEdit}><EditIcon /></IconButton></span>
+            <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span></span>
     :
-            <span className={classes.editableHolder} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}<IconButton onClick={startEdit}><EditIcon /></IconButton></span>;
+            <span className={`${classes.editableHolder} ${holderClassName}`} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}{onDelete && <IconButton className={classes.editableInlineButton} onClick={onDelete} size="small"><DeleteIcon /></IconButton>}</span>;
 }
 
 type EditorProps<C extends Content> = {
@@ -284,7 +313,7 @@ const TextQuestionEditor: Editor<TextQuestion> = ({content, modify}) => {
     const classes = useStyles();
 
     return <>
-        <Typography className={classes.editableWrapper}><ShortTextIcon />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography className={classes.editableWrapper}><ShortTextIcon className={classes.questionIcon} />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
         <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
@@ -295,7 +324,7 @@ const YesNoQuestionEditor: Editor<YesNoQuestion> = ({content, modify}) => {
     const classes = useStyles();
 
     return <>
-        <Typography className={classes.editableWrapper}><ThumbsUpDownIcon />Yes/no question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography className={classes.editableWrapper}><ThumbsUpDownIcon className={classes.questionIcon} />Yes/no question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
     </>;
@@ -305,7 +334,7 @@ const ParagraphQuestionEditor: Editor<ParagraphQuestion> = ({content, modify}) =
     const classes = useStyles();
 
     return <>
-        <Typography className={classes.editableWrapper}><ViewHeadlineIcon />Paragraph question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography className={classes.editableWrapper}><ViewHeadlineIcon className={classes.questionIcon} />Paragraph question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
         <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
@@ -319,24 +348,55 @@ interface EditableTextArrayProps {
 }
 
 function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProps) {
+    const classes = useStyles();
+
+    function handleDrag(drop: DropResult) {
+        if (drop.reason === 'CANCEL') {
+            return;
+        }
+        const newEntries = [...entries];
+        const removed = newEntries.splice(drop.source.index, 1);
+        newEntries.splice(drop.destination?.index!, 0, ...removed);
+        onSave(newEntries);
+    }
+
+    function save(index: number, text: string | undefined) {
+        const newEntries = [...entries];
+        if (text === undefined) {
+            newEntries.splice(index, 1);
+        } else {
+            newEntries.splice(index, 1, text);
+        }
+        onSave(newEntries);
+    }
+
     return <>
-        {entries.map((entry, index) => {
-            return <EditableText key={entry} text={entry} onSave={(text) => {
-                const newEntries = [...entries];
-                if (text === undefined) {
-                    newEntries.splice(index, 1);
-                } else {
-                    newEntries.splice(index, 1, text);
+        <DragDropContext onDragEnd={handleDrag}>
+            <Droppable droppableId="editableTextArray">
+                {(provided) => (<div ref={provided.innerRef} {...provided.droppableProps}>
+                    {entries.map((entry, index) => {
+                        return <Draggable draggableId={"D" + index} index={index}>
+                            {(provided) =>
+                                <div key={entry} className={classes.editableTextArrayDraggable} ref={provided.innerRef} {...provided.draggableProps}>
+                                    <span className={classes.editableTextArrayDragHandle} {...provided.dragHandleProps}><DragHandle /></span>
+                                    <EditableText text={entry} onSave={(text) => save(index, text)} onDelete={() => save(index, undefined)} />
+                                </div>
+                            }
+                        </Draggable>;
+                    })}
+                    {provided.placeholder}
+                </div>)}
+            </Droppable>
+        </DragDropContext>
+        <div className={classes.editableTextArrayAddRow}>
+            <EditableText holderClassName={classes.editableTextArrayAddText} placeHolder={placeholder} onSave={(text) => {
+                if (text) {
+                    const newEntries = [...entries, text];
+                    onSave(newEntries);
                 }
-                onSave(newEntries);
             }}/>
-        })}
-        <EditableText placeHolder={placeholder} onSave={(text) => {
-            if (text) {
-                const newEntries = [...entries, text];
-                onSave(newEntries);
-            }
-        }}/>
+        </div>
+        <Spacer />
     </>;
 }
 
@@ -344,8 +404,7 @@ const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = ({content, modify})
     const classes = useStyles();
 
     return <>
-        <Typography className={classes.editableWrapper}><ThumbsUpDownIcon/>Yes/no
-            question: <EditableText text={content.title} onSave={text => modify({
+        <Typography className={classes.editableWrapper}><GridOnIcon className={classes.questionIcon}/>Choice grid question: <EditableText text={content.title} onSave={text => modify({
                 ...content,
                 title: text
             })}/></Typography>
@@ -409,9 +468,52 @@ const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
 };
 
 const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
+    const rows = useMemo(() => content.rows || [], [content.rows]);
+    const columns = content.columns || [];
+
+    const [checks, setChecks] = useState<number[]>(() => {
+        return Array(rows.length).fill(-1);
+    });
+
+    useEffect(() => {
+        setChecks((checks) => {
+            if (checks.length !== rows.length) {
+                return Array(rows.length).fill(-1);
+            } else {
+                return checks;
+            }
+        })
+    }, [rows]);
+
+    function setChecked(row: number, col: number) {
+        const newChecks = [...checks];
+        newChecks.splice(row, 1, col);
+        setChecks(newChecks);
+    }
+
+    function isChecked(row: number, col: number) {
+        return checks[row] === col;
+    }
+
     return <>
         <FormLabel>{content.title}</FormLabel>
         {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        {rows.length > 0 && columns.length > 0 ?
+            <table>
+                <thead>
+                <tr>
+                    <td>&nbsp;</td>
+                    {columns.map((column, index) => <th key={index}>{column}</th>)}
+                </tr>
+                </thead>
+                <tbody>
+                    {rows.map((row, index) => <tr key={index}>
+                        <th>{row}</th>
+                        {columns.map((column, colIndex) => <td key={colIndex}><Radio checked={isChecked(index, colIndex)} onChange={(checked) => setChecked(index, colIndex)} /></td>)}
+                    </tr>)}
+                </tbody>
+            </table>
+        :   <em>No rows/columns defined</em>}
     </>;
 };
 
@@ -563,10 +665,11 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
 
     // Load the survey!
     const [surveyInfo, setSurveyInfo] = useState<SurveyInfo>({name: "Survey " + surveyId});
-    const [content, setContent] = useState<Content[]>([
+    const [content, setContent] = useState<SurveyContent[]>([
         {"type":"SectionHeader","id":"01EYR3VD73T12BBNDCFXZJDF3F","title":"About the survey","description":"Different arts activities impact people in all sorts of ways depending on their circumstances, and often in unexpected ways. Some of these questions might seem like they don’t apply to your course, but they’ve all come from what other arts participants have said about their experiences. Please answer the questions as honestly as you can, and remember there is no right answer to any of the questions. Unless the question gives a specific time, you should answer for how you generally feel. You can add comments in the boxes or around the page if you would like to. \nThank you so much for taking part in this project. "},
         {"type":"YesNoQuestion","id":"01EYR3VD73T12BBNDCFXZJDF3G","title":"Have you taken part in Arts courses before? (E.g. drama, music, painting, poetry etc.)"},
         {"type":"ParagraphQuestion","id":"01EYR42PTTNAJTZM77FEZX950Y","title":"If yes, please tell us what else you have done"},
+        {"type":"ChoiceGridQuestion","id":"01EYR69KRPQNGSWN1E3VVM8R4J","rows":["Creative activity is an important part of my life","I am good at some creative activities","I have skills that would allow me to work in the arts world","I am more myself when doing a creative activity than the rest of the time"],"title":"Please tick to show how much you agree or disagree with the following statements. Answer for how you generally feel.","columns":["Strongly Agree","Agree","Neutral","Disagree","Strongly Disagree"]},
     ]);
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
     const previewDialog = useRef<MakeDialog>(null);
@@ -624,8 +727,9 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                                 <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
                                 const newContent = content.slice();
                                 newContent.splice(index, 1, newC);
-                                // Buggy fix for now!
-                                setImmediate(() => setContent(newContent));
+                                setContent(newContent);
+                                // Buggy fix, so leave error in console for now!
+                                //setImmediate(() => setContent(newContent));
                             }} />}</Draggable>)}
                         </EditorContext.Provider>
                         {provided.placeholder}

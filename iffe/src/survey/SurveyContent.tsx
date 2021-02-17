@@ -34,4 +34,4 @@ export interface ChoiceGridQuestion extends Content {
 }
 
 
-type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceGridQuestion;
+export type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceGridQuestion;
