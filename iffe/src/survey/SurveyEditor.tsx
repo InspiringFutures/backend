@@ -95,6 +95,9 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         contentItem: {
         },
+        contentItemActive: {
+            borderLeft: `solid 5px ${theme.palette.primary.dark}`,
+        },
         editorContents: {
             padding: theme.spacing(1),
             paddingTop: 0,
@@ -208,7 +211,6 @@ type EditableTextProps = {
     onDelete?: () => void;
     holderClassName?: string;
 };
-
 
 export const escapedNewLineToLineBreakTag = (string: string) => string.split('\n').map((item: string, index: number) => (index === 0) ? item : [<br key={index} />, item])
 
@@ -457,9 +459,9 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
             <Droppable droppableId="editableTextArray">
                 {(provided) => (<div ref={provided.innerRef} {...provided.droppableProps}>
                     {entries.map((entry, index) => {
-                        return <Draggable draggableId={"D" + index} index={index}>
+                        return <Draggable key={entry} draggableId={"D" + index} index={index}>
                             {(provided) =>
-                                <div key={entry} className={classes.editableTextArrayDraggable} ref={provided.innerRef} {...provided.draggableProps}>
+                                <div className={classes.editableTextArrayDraggable} ref={provided.innerRef} {...provided.draggableProps}>
                                     <span className={classes.editableTextArrayDragHandle} {...provided.dragHandleProps}><DragHandle /></span>
                                     <EditableText text={entry} onSave={(text) => save(index, text)} onDelete={() => save(index, undefined)} />
                                 </div>
@@ -489,6 +491,7 @@ const ChoiceQuestionEditor: Editor<ChoiceQuestion> = (props) => {
     return <QuestionEditor {...props}>
         <div className={classes.choiceGridColumns}>
             <div className={classes.choiceGridColumn}>
+                <h4>Choices</h4>
                 <EditableTextArray placeholder="Add choice" entries={content.choices || []} onSave={(choices) => modify({...content, choices})} />
                 <FormControlLabel
                     control={<Checkbox checked={!!content.allowOther} onChange={(e) => modify({...content, allowOther: e.target.checked})} />}
@@ -655,7 +658,7 @@ const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggab
 
     const Editor = Editors[content.type];
     const Viewer = Viewers[content.type];
-    return <Paper className={classes.contentItem} ref={ref} {...draggableProps}>
+    return <Paper className={`${classes.contentItem} ${editorState.activeQuestion === content.id ? classes.contentItemActive : ''}`} ref={ref} {...draggableProps}>
         <div className={classes.dragHandle} {...dragHandleProps}><DragHandle /></div>
         <div className={classes.editorContents}>
             {editorState.activeQuestion === content.id ?
