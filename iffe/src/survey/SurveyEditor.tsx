@@ -36,6 +36,7 @@ import RadioButtonCheckedIcon from '@material-ui/icons/RadioButtonChecked';
 import GridOnIcon from '@material-ui/icons/GridOn';
 import DeleteIcon from '@material-ui/icons/Delete';
 import AssignmentReturnedIcon from '@material-ui/icons/AssignmentReturned';
+import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -97,9 +98,10 @@ const useStyles = makeStyles((theme: Theme) =>
             overflow: 'auto',
         },
         content: {
+            position: 'absolute',
             top: 64,
             bottom: 0,
-            position: 'absolute',
+            left: 0,
             right: 240,
             padding: theme.spacing(2),
             overflowY: 'scroll',
@@ -113,10 +115,22 @@ const useStyles = makeStyles((theme: Theme) =>
         contentItemChild: {
             marginLeft: theme.spacing(3),
         },
+        questionEditor: {
+            display: 'flex',
+            flexDirection: 'row',
+        },
+        questionEditorTitleDesc: {
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+        },
+        questionEditorTitle: {
+            fontSize: 20,
+        },
         editorContents: {
-            padding: theme.spacing(1),
-            paddingTop: 0,
-            marginBottom: theme.spacing(3),
+            paddingLeft: theme.spacing(2),
+            paddingRight: theme.spacing(2),
+            marginBottom: theme.spacing(2),
         },
         editableOuterWrapper: {
             flexGrow: 1,
@@ -128,6 +142,9 @@ const useStyles = makeStyles((theme: Theme) =>
             flexGrow: 1,
             marginBottom: 3,
         },
+        editableInputInner: {
+            font: 'inherit',
+        },
         editableWrapper: {
             display: 'flex',
             alignItems: 'baseline',
@@ -135,6 +152,7 @@ const useStyles = makeStyles((theme: Theme) =>
         editableHolder: {
             border: 'solid 1px transparent',
             flexGrow: 1,
+            display: 'flex',
             '&:hover': {
                 borderColor: theme.palette.primary.light,
             },
@@ -180,6 +198,11 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         editableTextArrayDragHandle: {
             alignSelf: 'center',
+            width: 31,
+            color: '#ddd',
+            '&:hover': {
+                color: '#777',
+            },
         },
         questionIcon: {
             transform: 'translateY(5px)',
@@ -187,8 +210,13 @@ const useStyles = makeStyles((theme: Theme) =>
         editableInlineButton: {
             alignSelf: 'center',
         },
+        editableTextArrayHeading: {
+            marginLeft: 31,
+            fontWeight: 'bold',
+        },
         editableTextArrayAddRow: {
             display: 'flex',
+            marginLeft: 31,
         },
         editableTextArrayAddText: {
             paddingTop: 5,
@@ -199,7 +227,12 @@ const useStyles = makeStyles((theme: Theme) =>
             margin: theme.spacing(1),
             marginBottom: 0,
             borderTop: 'solid 1px #ddd',
-            paddingTop: theme.spacing(1),
+        },
+        editorClosedWrapper: {
+            paddingBottom: theme.spacing(1),
+        },
+        questionTypeMenu: {
+            padding: 0,
         },
     }),
 );
@@ -269,7 +302,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
                             onDelete(action.options);
                         } else {
                             if (isValid && !!isValid(current.value)) {
-                                alert("Not a valid value 1")
+                                alert("Not a valid value")
                                 return current;
                             } else if (placeHolder) {
                                 onSave(undefined, action.options);
@@ -283,7 +316,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
                         }
                     } else {
                         if (isValid && !!isValid(current.value)) {
-                            alert("Not a valid value 2");
+                            alert("Not a valid value");
                             return current;
                         }
                         onSave(current.value, action.options);
@@ -342,6 +375,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
                        onChange={e => setCurrent(e.target.value)} onKeyDown={handleKey}
                        placeholder={placeHolder} onBlur={onBlur}
                        error={!!errorMessage} helperText={errorMessage}
+                       InputProps={{className: classes.editableInputInner}}
                 />
             }
             <IconButton className={classes.editableInlineButton} onClick={cancel}><CancelIcon /></IconButton>
@@ -350,7 +384,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
     : multiLine ?
             <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span></span>
     :
-            <span className={`${classes.editableHolder} ${holderClassName}`} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}{onDelete && <IconButton className={classes.editableInlineButton} onClick={() => onDelete()} size="small"><DeleteIcon /></IconButton>}</span>;
+            <span className={`${classes.editableHolder} ${holderClassName}`} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}<Spacer />{onDelete && <IconButton className={classes.editableInlineButton} onClick={() => onDelete()} size="small"><DeleteIcon /></IconButton>}</span>;
 }
 
 type EditorProps<C extends Content> = {
@@ -382,6 +416,8 @@ interface QuestionTypeMenuProps {
 }
 
 function QuestionTypeMenu({type, setType}: QuestionTypeMenuProps) {
+    const classes = useStyles();
+
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
     const handleClickListItem = (event: React.MouseEvent<HTMLElement>) => {
@@ -401,14 +437,16 @@ function QuestionTypeMenu({type, setType}: QuestionTypeMenuProps) {
 
     return (
         <>
-            <List component="nav">
+            <List component="nav" className={classes.questionTypeMenu}>
                 <ListItem
                     button
                     aria-haspopup="true"
                     onClick={handleClickListItem}
+                    className={classes.questionTypeMenu}
                 >
                     <ListItemIcon>{selected.icon}</ListItemIcon>
-                    <ListItemText primary="Question type" secondary={selected.name} />
+                    <ListItemText primary={selected.name} />
+                    <ListItemIcon><ArrowDropDownIcon /></ListItemIcon>
                 </ListItem>
             </List>
             <Menu
@@ -439,19 +477,25 @@ const QuestionEditor = function<Q extends Question> ({content, modify, children}
     const classes = useStyles();
 
     return <>
-        <div className={classes.editableWrapper}>
-            <EditableText text={content.title} placeHolder="Question" onSave={text => modify({...content, title: text})}/>
-            <QuestionTypeMenu type={content.type} setType={(type) => {
-                modify({type, title: content.title, description: content.description, id: content.id});
-            }} />
-        </div>
-        <div className={classes.editableWrapper}>
-            <span>Description:</span>
-            <Spacer width={8}/>
-            <EditableText multiLine
-                          placeHolder="Additional description that appears under this question."
-                          text={content.description}
-                          onSave={text => modify({...content, description: text})}/>
+        <div className={classes.questionEditor}>
+            <div className={classes.questionEditorTitleDesc}>
+                <div className={classes.questionEditorTitle}>
+                    <EditableText text={content.title} placeHolder="Question" onSave={text => modify({...content, title: text})}/>
+                </div>
+                <Typography variant="body1" className={classes.editableWrapper}>
+                    <span>Description:</span>
+                    <Spacer width={8}/>
+                    <EditableText multiLine
+                                  placeHolder="Additional description that appears under this question."
+                                  text={content.description}
+                                  onSave={text => modify({...content, description: text})}/>
+                </Typography>
+            </div>
+            <div>
+                <QuestionTypeMenu type={content.type} setType={(type) => {
+                    modify({type, title: content.title, description: content.description, id: content.id});
+                }} />
+            </div>
         </div>
         {children}
     </>;
@@ -462,7 +506,7 @@ const TextQuestionEditor: Editor<TextQuestion> = (props) => {
     const {content, modify} = props;
 
     return <QuestionEditor {...props}>
-        <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
+        <Typography variant="body1" className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
     </QuestionEditor>;
 };
 
@@ -475,7 +519,7 @@ const ParagraphQuestionEditor: Editor<ParagraphQuestion> = (props) => {
     const {content, modify} = props;
 
     return <QuestionEditor {...props}>
-        <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
+        <Typography variant="body1" className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
     </QuestionEditor>;
 };
 
@@ -483,9 +527,10 @@ interface EditableTextArrayProps {
     onSave: (newEntries: string[]) => void;
     entries: string[];
     placeholder: string;
+    heading: string;
 }
 
-function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProps) {
+function EditableTextArray({onSave, entries, placeholder, heading}: EditableTextArrayProps) {
     const [selectedIndex, setSelectedIndex] = useState<number>();
     const classes = useStyles();
 
@@ -533,7 +578,8 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
         }
     };
 
-    return <div>
+    return <Typography variant="body1">
+        <div className={classes.editableTextArrayHeading}>{heading}</div>
         <DragDropContext onDragEnd={handleDrag}>
             <Droppable droppableId="editableTextArray">
                 {(provided) => (<div ref={provided.innerRef} {...provided.droppableProps}>
@@ -562,7 +608,7 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
             />
         </div>
         <Spacer />
-    </div>;
+    </Typography>;
 }
 
 const ChoiceQuestionEditor: Editor<ChoiceQuestion> = (props) => {
@@ -572,8 +618,7 @@ const ChoiceQuestionEditor: Editor<ChoiceQuestion> = (props) => {
     return <QuestionEditor {...props}>
         <div className={classes.choiceGridColumns}>
             <div className={classes.choiceGridColumn}>
-                <h4>Choices</h4>
-                <EditableTextArray placeholder="Add choice" entries={content.choices || []} onSave={(choices) => modify({...content, choices})} />
+                <EditableTextArray heading="Choices" placeholder="Add choice" entries={content.choices || []} onSave={(choices) => modify({...content, choices})} />
                 <FormControlLabel
                     control={<Checkbox checked={!!content.allowOther} onChange={(e) => modify({...content, allowOther: e.target.checked})} />}
                     label={"Allow user to type an \"Other\" option"}
@@ -591,12 +636,10 @@ const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
     return <QuestionEditor {...props}>
         <div className={classes.choiceGridColumns}>
             <div className={classes.choiceGridColumn}>
-                <h4>Rows</h4>
-                <EditableTextArray placeholder="Add row" entries={content.rows || []} onSave={(rows) => modify({...content, rows})} />
+                <EditableTextArray heading="Rows" placeholder="Add row" entries={content.rows || []} onSave={(rows) => modify({...content, rows})} />
             </div>
             <div className={classes.choiceGridColumn}>
-                <h4>Columns</h4>
-                <EditableTextArray placeholder="Add column" entries={content.columns || []} onSave={(columns) => modify({...content, columns})} />
+                <EditableTextArray heading="Columns" placeholder="Add column" entries={content.columns || []} onSave={(columns) => modify({...content, columns})} />
             </div>
         </div>
     </QuestionEditor>;
@@ -773,7 +816,13 @@ const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggab
 
     const Editor = Editors[content.type];
     const Viewer = Viewers[content.type];
-    return <Paper className={`${classes.contentItem} ${editorState.activeQuestion === content.id ? classes.contentItemActive : ''} ${content.type === 'SectionHeader' ? classes.contentItemSection : classes.contentItemChild}`} ref={wrapRef} {...draggableProps}>
+    return <Paper className={`${classes.contentItem} ${editorState.activeQuestion === content.id ? classes.contentItemActive : ''} ${content.type === 'SectionHeader' ? classes.contentItemSection : classes.contentItemChild}`}
+                  ref={wrapRef} {...draggableProps}
+                  onClick={() => {
+                      if (editorState.activeQuestion !== content.id) {
+                          dispatch({type: 'focus', on: content.id});
+                      }
+                  }}>
         {dragHandleProps !== null && <div className={classes.dragHandle} {...dragHandleProps}><DragHandle /></div>}
         <div className={classes.editorContents}>
             {editorState.activeQuestion === content.id ?
@@ -781,7 +830,7 @@ const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggab
                     <Editor content={content as any} modify={modify}/>
                     <EditorFooter  content={content} modify={modify}/>
                 </>
-            :   <div onClick={() => dispatch({type: 'focus', on: content.id})}>
+            :   <div className={classes.editorClosedWrapper}>
                     <Viewer content={content as any}/>
                 </div>
             }
