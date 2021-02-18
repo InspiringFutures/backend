@@ -242,7 +242,6 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
     const wrapperRef = useRef<HTMLDivElement>(null);
     const [errorMessage, setErrorMessage] = useState<string>();
     const [state, dispatch] = useReducer(useCallback((current: EditableTextState, action: EditableTextAction) => {
-        console.log(action, current);
         switch (action.type) {
             case 'startEdit':
                 if (current.isEditing) {
@@ -595,7 +594,7 @@ type Viewer<C extends Content> = FunctionComponent<ViewerProps<C>>;
 
 const SectionHeaderViewer: Viewer<SectionHeader> = ({content}) => {
     return <>
-        <Typography variant="h4">{content.title}</Typography>
+        <Typography variant="h4">{content.title ? content.title : <em>Untitled Section</em>}</Typography>
         {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
     </>;
 };
@@ -870,12 +869,87 @@ function PreviewDialog({isOpen, close, contents}: (InjectedDialogProps & {conten
     );
 }
 
+type UndoAction<T> =
+    | {type: 'set'; value: T}
+    | {type: 'undo'}
+    | {type: 'redo'}
+    ;
+type UndoState<T> = {
+    past: T[];
+    present: T;
+    future: T[];
+}
+type UndoReducer<T> = (state: UndoState<T>, action: UndoAction<T>) => UndoState<T>;
+
+// Not a strict reducer, but we know what state is exposed and that this is safe.
+const undoReducer = function <T extends any>(state: UndoState<T>, action: UndoAction<T>): UndoState<T> {
+    switch (action.type) {
+        case 'set':
+            if (action.value === state.present) {
+                return state;
+            }
+            state.past.push(state.present);
+            return {...state, present: action.value, future: []};
+        case 'undo':
+            if (state.past.length === 0) {
+                return state;
+            }
+            const last = state.past.pop()!;
+            state.future.push(state.present);
+            return {...state, present: last};
+        case 'redo':
+            if (state.future.length === 0) {
+                return state;
+            }
+            const next = state.future.pop()!;
+            state.past.push(state.present);
+            return {...state, present: next};
+    }
+    return state;
+};
+
+interface UndoActions<T> {
+    set: (value: T) => void;
+    undo: () => void;
+    redo: () => void;
+}
+
+interface UndoStack<T> {
+    content: T;
+    canUndo: boolean;
+    canRedo: boolean;
+    actions: UndoActions<T>;
+}
+
+const useUndoStack = function <T extends any>(initialState: T): UndoStack<T> {
+    const initializerArg: UndoState<T> = {
+        past: [],
+        present: initialState,
+        future: []
+    };
+    const [state, dispatch] = useReducer<UndoReducer<T>>(undoReducer, initializerArg);
+    const actions = useMemo(() => {
+        return {
+            set: (value: T) => dispatch({type: 'set', value}),
+            undo: () => dispatch({type: 'undo'}),
+            redo: () => dispatch({type: 'redo'}),
+        };
+    }, []);
+    return {
+        content: state.present,
+        canUndo: state.past.length > 0,
+        canRedo: state.future.length > 0,
+        actions,
+    };
+};
+
+
 export default function SurveyEditor({surveyId}: SurveyEditorProps) {
     const classes = useStyles();
 
     // Load the survey!
     const [surveyInfo, setSurveyInfo] = useState<SurveyInfo>({name: "Survey " + surveyId});
-    const [content, setContent] = useState<SurveyContent[]>([
+    const {content, canUndo, canRedo, actions} = useUndoStack<SurveyContent[]>([
         {"type":"SectionHeader","id":"01EYR3VD73T12BBNDCFXZJDF3F","title":"About the survey","description":"Different arts activities impact people in all sorts of ways depending on their circumstances, and often in unexpected ways. Some of these questions might seem like they don’t apply to your course, but they’ve all come from what other arts participants have said about their experiences. Please answer the questions as honestly as you can, and remember there is no right answer to any of the questions. Unless the question gives a specific time, you should answer for how you generally feel. You can add comments in the boxes or around the page if you would like to. \nThank you so much for taking part in this project. "},
         {"type":"YesNoQuestion","id":"01EYR3VD73T12BBNDCFXZJDF3G","title":"Have you taken part in Arts courses before? (E.g. drama, music, painting, poetry etc.)"},
         {"type":"ParagraphQuestion","id":"01EYR42PTTNAJTZM77FEZX950Y","title":"If yes, please tell us what else you have done"},
@@ -884,12 +958,11 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
     const previewDialog = useRef<MakeDialog>(null);
 
-    console.log(content, JSON.stringify(content));
     function onDragEnd(drop: DropResult) {
         if (drop.reason === 'CANCEL') {
             return;
         }
-        const newContent = content.slice();
+        const newContent = [...content];
         let id;
         if (drop.source.droppableId === "palette") {
             const type = drop.draggableId as Content["type"];
@@ -902,7 +975,7 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
             id = removed[0].id;
             newContent.splice(drop.destination?.index!, 0, ...removed);
         }
-        setContent(newContent);
+        actions.set(newContent);
         editorDispatch({type: "focus", on: id});
     }
 
@@ -919,11 +992,11 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                         Preview
                     </Button>
                     <Spacer width={16} />
-                    <Button variant="contained" startIcon={<UndoIcon />}>
+                    <Button variant="contained" startIcon={<UndoIcon />} disabled={!canUndo} onClick={() => actions.undo()}>
                         Undo
                     </Button>
                     <Spacer width={8} />
-                    <Button variant="contained" startIcon={<RedoIcon />}>
+                    <Button variant="contained" startIcon={<RedoIcon />} disabled={!canRedo} onClick={() => actions.redo()}>
                         Redo
                     </Button>
                     <Spacer width={16} />
@@ -937,27 +1010,29 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                     <main className={classes.content} ref={provided.innerRef}>
                         <Toolbar />
                         <EditorContext.Provider value={{state: editorState, dispatch: editorDispatch}}>
-                            {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index}>{(provided) =>
-                                <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
-                                const newContent = [...content];
-                                let on;
-                                if (newC === "duplicate") {
-                                    newC = {...c};
-                                    on = newC.id = ulid();
-                                    newContent.splice(index + 1, 0, newC);
-                                } else if (newC === undefined) {
-                                    newContent.splice(index, 1);
-                                    if (newContent[index]) {
-                                        on = newContent[index].id;
-                                    }
-                                } else {
-                                    newContent.splice(index, 1, newC);
-                                }
-                                setContent(newContent);
-                                if (on) {
-                                    editorDispatch({type: "focus", on});
-                                }
-                            }} />}</Draggable>)}
+                            {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index}>
+                                {(provided) =>
+                                    <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
+                                        const newContent = [...content];
+                                        let on;
+                                        if (newC === "duplicate") {
+                                            newC = {...c};
+                                            on = newC.id = ulid();
+                                            newContent.splice(index + 1, 0, newC);
+                                        } else if (newC === undefined) {
+                                            newContent.splice(index, 1);
+                                            if (newContent[index]) {
+                                                on = newContent[index].id;
+                                            }
+                                        } else {
+                                            newContent.splice(index, 1, newC);
+                                        }
+                                        actions.set(newContent);
+                                        if (on) {
+                                            editorDispatch({type: "focus", on});
+                                        }
+                                    }} />
+                            }</Draggable>)}
                         </EditorContext.Provider>
                         {provided.placeholder}
                     </main>
