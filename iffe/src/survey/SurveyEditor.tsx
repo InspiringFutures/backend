@@ -33,6 +33,7 @@ import ViewHeadlineIcon from '@material-ui/icons/ViewHeadline';
 import RadioButtonCheckedIcon from '@material-ui/icons/RadioButtonChecked';
 import GridOnIcon from '@material-ui/icons/GridOn';
 import DeleteIcon from '@material-ui/icons/Delete';
+import AssignmentReturnedIcon from '@material-ui/icons/AssignmentReturned';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -50,7 +51,7 @@ import {
     Radio,
     RadioGroup,
     TextareaAutosize,
-    TextField
+    TextField, Tooltip
 } from "@material-ui/core";
 import { ulid } from "ulid";
 
@@ -178,6 +179,13 @@ const useStyles = makeStyles((theme: Theme) =>
         editableTextArrayAddText: {
             paddingTop: 5,
             paddingBottom: 5,
+        },
+        editorFooterWrapper: {
+            display: 'flex',
+            margin: theme.spacing(1),
+            marginBottom: 0,
+            borderTop: 'solid 1px #ddd',
+            paddingTop: theme.spacing(1),
         },
     }),
 );
@@ -334,7 +342,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
 
 type EditorProps<C extends Content> = {
     content: C;
-    modify: (newContent: SurveyContent) => void;
+    modify: (newContent: SurveyContent|undefined|"duplicate") => void;
 };
 type Editor<C extends Content> = FunctionComponent<EditorProps<C>>;
 
@@ -710,6 +718,15 @@ const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "ChoiceGridQuestion": ChoiceGridQuestionViewer,
 };
 
+const EditorFooter: Editor<Content> = ({modify}) => {
+    const classes = useStyles();
+    return <div className={classes.editorFooterWrapper}>
+        <Spacer />
+        <Tooltip title="Duplicate"><IconButton className={classes.editableInlineButton} onClick={() => modify("duplicate")}><AssignmentReturnedIcon /></IconButton></Tooltip>
+        <Tooltip title="Delete"><IconButton className={classes.editableInlineButton} onClick={() => modify(undefined)}><DeleteIcon /></IconButton></Tooltip>
+    </div>;
+};
+
 const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggableProps: any; dragHandleProps:any}>(({content, modify, draggableProps, dragHandleProps}, ref) => {
     const classes = useStyles();
 
@@ -721,7 +738,10 @@ const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggab
         <div className={classes.dragHandle} {...dragHandleProps}><DragHandle /></div>
         <div className={classes.editorContents}>
             {editorState.activeQuestion === content.id ?
-                <Editor content={content as any} modify={modify}/>
+                <>
+                    <Editor content={content as any} modify={modify}/>
+                    <EditorFooter  content={content} modify={modify}/>
+                </>
             :   <div onClick={() => dispatch({type: 'focus', on: content.id})}>
                     <Viewer content={content as any}/>
                 </div>
@@ -870,16 +890,20 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
             return;
         }
         const newContent = content.slice();
+        let id;
         if (drop.source.droppableId === "palette") {
             const type = drop.draggableId as Content["type"];
-            const newItem = {type, id: ulid()};
+            id = ulid();
+            const newItem = {type, id};
             newContent.splice(drop.destination?.index!, 0, newItem);
             editorDispatch({type: 'focus', on: newItem.id});
         } else {
             const removed = newContent.splice(drop.source.index, 1);
+            id = removed[0].id;
             newContent.splice(drop.destination?.index!, 0, ...removed);
         }
         setContent(newContent);
+        editorDispatch({type: "focus", on: id});
     }
 
     return (
@@ -915,11 +939,24 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                         <EditorContext.Provider value={{state: editorState, dispatch: editorDispatch}}>
                             {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index}>{(provided) =>
                                 <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
-                                const newContent = content.slice();
-                                newContent.splice(index, 1, newC);
+                                const newContent = [...content];
+                                let on;
+                                if (newC === "duplicate") {
+                                    newC = {...c};
+                                    on = newC.id = ulid();
+                                    newContent.splice(index + 1, 0, newC);
+                                } else if (newC === undefined) {
+                                    newContent.splice(index, 1);
+                                    if (newContent[index]) {
+                                        on = newContent[index].id;
+                                    }
+                                } else {
+                                    newContent.splice(index, 1, newC);
+                                }
                                 setContent(newContent);
-                                // Buggy fix, so leave error in console for now!
-                                //setImmediate(() => setContent(newContent));
+                                if (on) {
+                                    editorDispatch({type: "focus", on});
+                                }
                             }} />}</Draggable>)}
                         </EditorContext.Provider>
                         {provided.placeholder}
