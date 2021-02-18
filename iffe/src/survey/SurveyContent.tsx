@@ -46,3 +46,7 @@ export interface ChoiceGridQuestion extends Question {
 
 export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion;
 export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
+
+export function isQuestion(c: Content) {
+    return !(c.type === 'SectionHeader' || c.type === 'TextBlock');
+}

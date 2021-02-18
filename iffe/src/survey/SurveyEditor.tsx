@@ -64,7 +64,7 @@ import { ulid } from "ulid";
 import {
     ChoiceGridQuestion,
     ChoiceQuestion,
-    Content,
+    Content, isQuestion,
     ParagraphQuestion,
     Question,
     SectionHeader,
@@ -398,7 +398,7 @@ const SectionHeaderEditor: Editor<SectionHeader> = ({content, modify}) => {
     const {hasSingleSection} = useContext(EditorContext);
 
     return <>
-        <Typography variant="h4" className={classes.editableWrapper}>{!hasSingleSection && "Section: "}<EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography variant="h4" className={classes.editableWrapper}>{!hasSingleSection && "Section: "}<EditableText placeHolder="Title" text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description of this section" text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
     </>;
@@ -407,7 +407,7 @@ const SectionHeaderEditor: Editor<SectionHeader> = ({content, modify}) => {
 const TextBlockEditor: Editor<TextBlock> = ({content, modify}) => {
     const classes = useStyles();
 
-    return <Typography className={classes.editableWrapper}><span>Text:</span><Spacer width={8} /><EditableText multiLine text={content.title} onSave={text => modify({...content, title: text})} /></Typography>;
+    return <Typography className={classes.editableWrapper}><span>Text:</span><Spacer width={8} /><EditableText placeHolder="Explantory text" multiLine text={content.title} onSave={text => modify({...content, title: text})} /></Typography>;
 };
 
 interface QuestionTypeMenuProps {
@@ -938,6 +938,9 @@ function PreviewDialog({isOpen, close, contents}: (InjectedDialogProps & {conten
         }
     }, [isOpen]);
 
+    console.log(contents);
+
+    let questionNum = 1;
     return (
             <Dialog
                 open={isOpen}
@@ -948,7 +951,16 @@ function PreviewDialog({isOpen, close, contents}: (InjectedDialogProps & {conten
             >
                 <DialogTitle id="scroll-dialog-title">Preview</DialogTitle>
                 <DialogContent dividers>
-                    {contents.map(content => <ContentViewer key={content.id} content={content} />)}
+                    {contents.map(content => {
+                        let questionHeading = null;
+                        if (isQuestion(content)) {
+                            questionHeading = <h4>Question {questionNum++}</h4>;
+                        }
+                        return <>
+                            {questionHeading}
+                            <ContentViewer key={content.id} content={content}/>
+                        </>;
+                    })}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={close} color="primary">
@@ -1059,6 +1071,10 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
         {"type":"YesNoQuestion","id":"01EYR3VD73T12BBNDCFXZJDF3G","title":"Have you taken part in Arts courses before? (E.g. drama, music, painting, poetry etc.)"},
         {"type":"ParagraphQuestion","id":"01EYR42PTTNAJTZM77FEZX950Y","title":"If yes, please tell us what else you have done"},
         {"type":"ChoiceGridQuestion","id":"01EYR69KRPQNGSWN1E3VVM8R4J","rows":["Creative activity is an important part of my life","I am good at some creative activities","I have skills that would allow me to work in the arts world","I am more myself when doing a creative activity than the rest of the time"],"title":"Please tick to show how much you agree or disagree with the following statements. Answer for how you generally feel.","columns":["Strongly Agree","Agree","Neutral","Disagree","Strongly Disagree"]},
+        {type: "SectionHeader", id: "01EYV1MK19BXCPVS3YZ40MEQ6B", title: "About You"},
+        {type: "TextQuestion", id: "01EYV1R3QMJCSJ105S1BKDDYE4", title: "Describe yourself in three words", placeholder: "You can use anything that makes sense to you."},
+        {type: "TextBlock", id: "01EYV22JNZKMQ4FM4SYWA3Q4M6", title: "We’re asking for a bit of info about you so that w… others. Please answer as accurately as you can."},
+        {type: "ChoiceQuestion", id: "01EYV1MMHQKR057CC41HKNE5C7", title: "Please enter your ethnicity", choices: ["White", "Black", "Asian", "Other"]},
     ]);
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
     const previewDialog = useRef<MakeDialog>(null);
