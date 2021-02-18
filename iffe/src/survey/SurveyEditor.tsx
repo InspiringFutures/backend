@@ -1,9 +1,11 @@
 import React, {
     forwardRef,
-    FunctionComponent, PropsWithChildren,
+    FunctionComponent,
+    PropsWithChildren,
     useCallback,
     useContext,
-    useEffect, useMemo,
+    useEffect,
+    useMemo,
     useReducer,
     useRef,
     useState
@@ -42,24 +44,30 @@ import {
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle, FormControl,
+    DialogTitle,
+    FormControl,
     FormControlLabel,
     FormLabel,
-    IconButton, Menu,
+    IconButton,
+    Menu,
     MenuItem,
     Paper,
     Radio,
     RadioGroup,
     TextareaAutosize,
-    TextField, Tooltip
+    TextField,
+    Tooltip
 } from "@material-ui/core";
 import { ulid } from "ulid";
 
 import {
-    ChoiceGridQuestion, ChoiceQuestion,
+    ChoiceGridQuestion,
+    ChoiceQuestion,
     Content,
-    ParagraphQuestion, Question,
-    SectionHeader, SurveyContent,
+    ParagraphQuestion,
+    Question,
+    SectionHeader,
+    SurveyContent,
     TextBlock,
     TextQuestion,
     YesNoQuestion
@@ -89,15 +97,21 @@ const useStyles = makeStyles((theme: Theme) =>
             overflow: 'auto',
         },
         content: {
-            flexGrow: 1,
-            padding: theme.spacing(3),
+            top: 64,
+            bottom: 0,
+            position: 'absolute',
+            right: 240,
+            padding: theme.spacing(2),
             overflowY: 'scroll',
-            height: '100vh',
         },
         contentItem: {
         },
         contentItemActive: {
             borderLeft: `solid 5px ${theme.palette.primary.dark}`,
+        },
+        contentItemSection: {},
+        contentItemChild: {
+            marginLeft: theme.spacing(3),
         },
         editorContents: {
             padding: theme.spacing(1),
@@ -347,9 +361,10 @@ type Editor<C extends Content> = FunctionComponent<EditorProps<C>>;
 
 const SectionHeaderEditor: Editor<SectionHeader> = ({content, modify}) => {
     const classes = useStyles();
+    const {hasSingleSection} = useContext(EditorContext);
 
     return <>
-        <Typography variant="h4" className={classes.editableWrapper}>Section: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
+        <Typography variant="h4" className={classes.editableWrapper}>{!hasSingleSection && "Section: "}<EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
         <EditableText multiLine placeHolder="Additional description of this section" text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
     </>;
@@ -717,12 +732,14 @@ const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "ChoiceGridQuestion": ChoiceGridQuestionViewer,
 };
 
-const EditorFooter: Editor<Content> = ({modify}) => {
+const EditorFooter: Editor<Content> = ({content, modify}) => {
     const classes = useStyles();
+    const {hasSingleSection} = useContext(EditorContext);
+
     return <div className={classes.editorFooterWrapper}>
         <Spacer />
         <Tooltip title="Duplicate"><IconButton className={classes.editableInlineButton} onClick={() => modify("duplicate")}><AssignmentReturnedIcon /></IconButton></Tooltip>
-        <Tooltip title="Delete"><IconButton className={classes.editableInlineButton} onClick={() => modify(undefined)}><DeleteIcon /></IconButton></Tooltip>
+        {(content.type !== 'SectionHeader' || !hasSingleSection) && <Tooltip title="Delete"><IconButton className={classes.editableInlineButton} onClick={() => modify(undefined)}><DeleteIcon /></IconButton></Tooltip>}
     </div>;
 };
 
@@ -731,10 +748,33 @@ const ContentEditor = forwardRef<HTMLDivElement, EditorProps<Content> & {draggab
 
     const {state: editorState, dispatch} = useContext(EditorContext);
 
+    const refCopy = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        if (editorState.activeQuestion === content.id && refCopy.current) {
+            if ('scrollIntoViewIfNeeded' in refCopy.current) {
+                // @ts-ignore
+                refCopy.current.scrollIntoViewIfNeeded();
+            } else {
+                refCopy.current.scrollIntoView();
+            }
+        }
+    }, [editorState.activeQuestion, content.id]);
+
+    const wrapRef = (refValue: HTMLDivElement | null) => {
+        refCopy.current = refValue;
+        if (ref) {
+            if ('current' in ref) {
+                ref.current = refValue;
+            } else {
+                ref(refValue);
+            }
+        }
+    };
+
     const Editor = Editors[content.type];
     const Viewer = Viewers[content.type];
-    return <Paper className={`${classes.contentItem} ${editorState.activeQuestion === content.id ? classes.contentItemActive : ''}`} ref={ref} {...draggableProps}>
-        <div className={classes.dragHandle} {...dragHandleProps}><DragHandle /></div>
+    return <Paper className={`${classes.contentItem} ${editorState.activeQuestion === content.id ? classes.contentItemActive : ''} ${content.type === 'SectionHeader' ? classes.contentItemSection : classes.contentItemChild}`} ref={wrapRef} {...draggableProps}>
+        {dragHandleProps !== null && <div className={classes.dragHandle} {...dragHandleProps}><DragHandle /></div>}
         <div className={classes.editorContents}>
             {editorState.activeQuestion === content.id ?
                 <>
@@ -795,11 +835,12 @@ function editorReducer(state: EditorState, action: EditorAction) {
 interface EditorControl {
     state: EditorState;
     dispatch: (action: EditorAction) => void;
+    hasSingleSection: boolean;
 }
 
 const EditorContext = React.createContext<EditorControl>({state: {}, dispatch: () => {
     throw new Error("EditorContext used outside of provider");
-}});
+}, hasSingleSection: true});
 
 interface InjectedDialogProps {
     isOpen: boolean;
@@ -944,6 +985,21 @@ const useUndoStack = function <T extends any>(initialState: T): UndoStack<T> {
 };
 
 
+function getCountUnder(content: Content[], index: number) {
+    const item = content[index];
+    if (item.type === 'SectionHeader') {
+        // Count questions under this
+        let i;
+        for (i = index + 1; i < content.length; i++) {
+            if (content[i].type === 'SectionHeader') {
+                break;
+            }
+        }
+        return i - index;
+    }
+    return 1;
+}
+
 export default function SurveyEditor({surveyId}: SurveyEditorProps) {
     const classes = useStyles();
 
@@ -971,13 +1027,15 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
             newContent.splice(drop.destination?.index!, 0, newItem);
             editorDispatch({type: 'focus', on: newItem.id});
         } else {
-            const removed = newContent.splice(drop.source.index, 1);
+            const removed = newContent.splice(drop.source.index, getCountUnder(content, drop.source.index));
             id = removed[0].id;
             newContent.splice(drop.destination?.index!, 0, ...removed);
         }
         actions.set(newContent);
         editorDispatch({type: "focus", on: id});
     }
+
+    const hasSingleSection = content.filter(c => c.type === 'SectionHeader').length === 1;
 
     return (
         <DragDropContext onDragEnd={onDragEnd}><div className={classes.root}>
@@ -1008,17 +1066,24 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
             <Droppable droppableId="main">
                 {(provided) =>
                     <main className={classes.content} ref={provided.innerRef}>
-                        <Toolbar />
-                        <EditorContext.Provider value={{state: editorState, dispatch: editorDispatch}}>
-                            {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index}>
+                        <EditorContext.Provider value={{state: editorState, dispatch: editorDispatch, hasSingleSection}}>
+                            {content.map((c, index) => <Draggable key={c.id} draggableId={c.id} index={index} isDragDisabled={hasSingleSection && c.type === 'SectionHeader'}>
                                 {(provided) =>
                                     <ContentEditor content={c} ref={provided.innerRef} draggableProps={provided.draggableProps} dragHandleProps={provided.dragHandleProps} modify={(newC) => {
                                         const newContent = [...content];
                                         let on;
                                         if (newC === "duplicate") {
-                                            newC = {...c};
-                                            on = newC.id = ulid();
-                                            newContent.splice(index + 1, 0, newC);
+                                            const dupCount = getCountUnder(content, index);
+                                            const toAdd = [];
+                                            for (let i = index; i < index + dupCount; i++) {
+                                                const newC = JSON.parse(JSON.stringify(content[i]));
+                                                newC.id = ulid();
+                                                if (on === undefined) {
+                                                    on = newC.id;
+                                                }
+                                                toAdd.push(newC);
+                                            }
+                                            newContent.splice(index + dupCount, 0, ...toAdd);
                                         } else if (newC === undefined) {
                                             newContent.splice(index, 1);
                                             if (newContent[index]) {
@@ -1072,7 +1137,15 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                                                 :
                                                     <ListItem button ref={provided.innerRef}
                                                               {...provided.draggableProps}
-                                                              {...provided.dragHandleProps}>
+                                                              {...provided.dragHandleProps}
+                                                              onClick={() => {
+                                                                  const id = ulid();
+                                                                  const newItem = {type: item.type, id};
+                                                                  const newContent = [...content, newItem];
+                                                                  actions.set(newContent);
+                                                                  editorDispatch({type: "focus", on: id});
+                                                              }}
+                                                    >
                                                         <ListItemIcon>{item.icon}</ListItemIcon>
                                                         <ListItemText primary={item.name}/>
                                                     </ListItem>
