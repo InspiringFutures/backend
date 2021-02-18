@@ -35,8 +35,9 @@ import ViewHeadlineIcon from '@material-ui/icons/ViewHeadline';
 import RadioButtonCheckedIcon from '@material-ui/icons/RadioButtonChecked';
 import GridOnIcon from '@material-ui/icons/GridOn';
 import DeleteIcon from '@material-ui/icons/Delete';
-import AssignmentReturnedIcon from '@material-ui/icons/AssignmentReturned';
+import FilterNoneIcon from '@material-ui/icons/FilterNone';
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
+import DragIndicatorIcon from '@material-ui/icons/DragIndicator';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -587,7 +588,7 @@ function EditableTextArray({onSave, entries, placeholder, heading}: EditableText
                         return <Draggable key={index} draggableId={"D" + index} index={index}>
                             {(provided) =>
                                 <div className={classes.editableTextArrayDraggable} ref={provided.innerRef} {...provided.draggableProps}>
-                                    <span className={classes.editableTextArrayDragHandle} {...provided.dragHandleProps}><DragHandle /></span>
+                                    <span className={classes.editableTextArrayDragHandle} {...provided.dragHandleProps}><DragIndicatorIcon /></span>
                                     <EditableText autoFocus={selectedIndex === index} isValid={isValid(index)} text={entry} onSave={(text, options) => save(index, text, options)} onDelete={(options) => save(index, undefined, options)} />
                                 </div>
                             }
@@ -781,7 +782,7 @@ const EditorFooter: Editor<Content> = ({content, modify}) => {
 
     return <div className={classes.editorFooterWrapper}>
         <Spacer />
-        <Tooltip title="Duplicate"><IconButton className={classes.editableInlineButton} onClick={() => modify("duplicate")}><AssignmentReturnedIcon /></IconButton></Tooltip>
+        <Tooltip title="Duplicate"><IconButton className={classes.editableInlineButton} onClick={() => modify("duplicate")}><FilterNoneIcon /></IconButton></Tooltip>
         {(content.type !== 'SectionHeader' || !hasSingleSection) && <Tooltip title="Delete"><IconButton className={classes.editableInlineButton} onClick={() => modify(undefined)}><DeleteIcon /></IconButton></Tooltip>}
     </div>;
 };
