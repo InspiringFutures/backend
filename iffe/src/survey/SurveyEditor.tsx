@@ -203,13 +203,20 @@ function Spacer({width}: {width?: number}) {
     return <span style={width ? {width} : {flexGrow: 1}} />;
 }
 
+interface SaveOptions {
+    movement?: number;
+    fromBlur?: boolean;
+}
+
 type EditableTextProps = {
     text?: string;
-    onSave: (newText: string | undefined) => void;
+    onSave: (newText: string | undefined, options?: SaveOptions) => void;
     multiLine?: boolean;
     placeHolder?: string;
-    onDelete?: () => void;
+    onDelete?: (options?: SaveOptions) => void;
     holderClassName?: string;
+    autoFocus?: boolean;
+    isValid?: (newText: string | undefined) => string | undefined;
 };
 
 export const escapedNewLineToLineBreakTag = (string: string) => string.split('\n').map((item: string, index: number) => (index === 0) ? item : [<br key={index} />, item])
@@ -217,36 +224,48 @@ export const escapedNewLineToLineBreakTag = (string: string) => string.split('\n
 type EditableTextState = {isEditing: boolean; value?: string};
 type EditableTextAction =
     | {type: "startEdit"}
-    | {type: "save"}
+    | {type: "save"; options?: SaveOptions}
     | {type: "cancel"}
     | {type: "update"; value: string}
     ;
 
-function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderClassName}: EditableTextProps) {
+function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderClassName, autoFocus, isValid}: EditableTextProps) {
     const classes = useStyles();
     const wrapperRef = useRef<HTMLDivElement>(null);
-    const [state, dispatch] = useReducer((current: EditableTextState, action: EditableTextAction) => {
+    const [errorMessage, setErrorMessage] = useState<string>();
+    const [state, dispatch] = useReducer(useCallback((current: EditableTextState, action: EditableTextAction) => {
+        console.log(action, current);
         switch (action.type) {
             case 'startEdit':
+                if (current.isEditing) {
+                    return current;
+                }
                 return {isEditing: true, value: text ?? ""};
             case 'save':
                 if (current.isEditing) {
                     if (current.value === undefined || current.value === "") {
-                        if (placeHolder) {
-                            onSave(undefined);
+                        if (onDelete) {
+                            onDelete(action.options);
                         } else {
-                            if (text !== undefined) {
-                                if (onDelete) {
-                                    onDelete();
-                                } else {
+                            if (isValid && !!isValid(current.value)) {
+                                alert("Not a valid value 1")
+                                return current;
+                            } else if (placeHolder) {
+                                onSave(undefined, action.options);
+                            } else {
+                                if (text !== undefined) {
                                     // Not empty to start with
                                     alert("Cannot be empty.");
-                                    return current;
                                 }
+                                return current;
                             }
                         }
                     } else {
-                        onSave(current.value);
+                        if (isValid && !!isValid(current.value)) {
+                            alert("Not a valid value 2");
+                            return current;
+                        }
+                        onSave(current.value, action.options);
                     }
                 }
                 return {isEditing: false};
@@ -255,28 +274,39 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
             case 'update':
                 return {...current, value: action.value};
         }
-    }, {isEditing: false});
+    }, [onSave, onDelete, isValid, placeHolder, text]), {isEditing: !!autoFocus});
+
+    useEffect(() => {
+        if (autoFocus === true) {
+            dispatch({type: 'startEdit'});
+        }
+    }, [autoFocus]);
 
     const startEdit = useCallback(() => dispatch({type: 'startEdit'}), []);
-    const save = useCallback(() => dispatch({type: 'save'}), []);
+    const save = useCallback((options?: SaveOptions) => dispatch({type: 'save', options}), []);
     const cancel = useCallback(() => dispatch({type: 'cancel'}), []);
     const setCurrent = useCallback((value: string) => {
         dispatch({type: 'update', value});
-    }, []);
+        if (isValid) {
+            setErrorMessage(isValid(value));
+        }
+    }, [isValid]);
 
     const handleKey = (e: React.KeyboardEvent) => {
         if (!multiLine && e.key === "Enter") {
-            save();
+            save({movement: 1});
         } else if (e.key === "Escape") {
             cancel();
+        } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            save({movement: e.key === "ArrowUp" ? -1 : 1});
         }
     };
 
     const onBlur = (e: React.FocusEvent) => {
-        if (wrapperRef.current && wrapperRef.current.contains(e.nativeEvent.relatedTarget as Element)) {
+        if (wrapperRef.current && wrapperRef.current.contains(e.relatedTarget as Element)) {
             // Inside, so ignore
         } else {
-            save();
+            save({fromBlur: true});
         }
     };
 
@@ -284,20 +314,22 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
         <span className={classes.editableOuterWrapper} ref={wrapperRef}>
             {multiLine ?
                 <TextareaAutosize rowsMax={10} autoFocus className={classes.editableInput} value={state.value}
-                      onChange={e => setCurrent(e.target.value)} onKeyUp={handleKey}
+                      onChange={e => setCurrent(e.target.value)} onKeyDown={handleKey}
                       placeholder={placeHolder} onBlur={onBlur} />
                 :
-                <input autoFocus className={classes.editableInput} value={state.value}
-                       onChange={e => setCurrent(e.target.value)} onKeyUp={handleKey}
-                       placeholder={placeHolder} onBlur={onBlur} />
+                <TextField autoFocus className={classes.editableInput} value={state.value}
+                       onChange={e => setCurrent(e.target.value)} onKeyDown={handleKey}
+                       placeholder={placeHolder} onBlur={onBlur}
+                       error={!!errorMessage} helperText={errorMessage}
+                />
             }
             <IconButton className={classes.editableInlineButton} onClick={cancel}><CancelIcon /></IconButton>
-            <IconButton className={classes.editableInlineButton} onClick={save}><CheckCircleIcon /></IconButton>
+            <IconButton className={classes.editableInlineButton} onClick={() => save()}><CheckCircleIcon /></IconButton>
         </span>
     : multiLine ?
             <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span></span>
     :
-            <span className={`${classes.editableHolder} ${holderClassName}`} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}{onDelete && <IconButton className={classes.editableInlineButton} onClick={onDelete} size="small"><DeleteIcon /></IconButton>}</span>;
+            <span className={`${classes.editableHolder} ${holderClassName}`} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}{onDelete && <IconButton className={classes.editableInlineButton} onClick={() => onDelete()} size="small"><DeleteIcon /></IconButton>}</span>;
 }
 
 type EditorProps<C extends Content> = {
@@ -432,6 +464,7 @@ interface EditableTextArrayProps {
 }
 
 function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProps) {
+    const [selectedIndex, setSelectedIndex] = useState<number>();
     const classes = useStyles();
 
     function handleDrag(drop: DropResult) {
@@ -442,9 +475,10 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
         const removed = newEntries.splice(drop.source.index, 1);
         newEntries.splice(drop.destination?.index!, 0, ...removed);
         onSave(newEntries);
+        setSelectedIndex(undefined);
     }
 
-    function save(index: number, text: string | undefined) {
+    function save(index: number, text: string | undefined, options?: SaveOptions) {
         const newEntries = [...entries];
         if (text === undefined) {
             newEntries.splice(index, 1);
@@ -452,18 +486,41 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
             newEntries.splice(index, 1, text);
         }
         onSave(newEntries);
+        let newIndex = undefined;
+        if (options && options.movement !== undefined) {
+            newIndex = index + options.movement;
+        }
+        setSelectedIndex(newIndex);
     }
 
-    return <>
+    // This is a hack: going up from the top item sets selectedIndex to -1, clearing autoFocus, then
+    // this sets it again
+    useEffect(() => {
+        if (selectedIndex === -1) {
+            setSelectedIndex(0);
+        }
+    }, [selectedIndex]);
+
+    const isValid = (index: number) => (value: string | undefined) => {
+        if (value === undefined || value === "") return;
+        const foundIndex = entries.findIndex((test, testIndex) => {
+            return testIndex !== index && value === test;
+        });
+        if (foundIndex !== -1) {
+            return "Duplicate option";
+        }
+    };
+
+    return <div>
         <DragDropContext onDragEnd={handleDrag}>
             <Droppable droppableId="editableTextArray">
                 {(provided) => (<div ref={provided.innerRef} {...provided.droppableProps}>
                     {entries.map((entry, index) => {
-                        return <Draggable key={entry} draggableId={"D" + index} index={index}>
+                        return <Draggable key={index} draggableId={"D" + index} index={index}>
                             {(provided) =>
                                 <div className={classes.editableTextArrayDraggable} ref={provided.innerRef} {...provided.draggableProps}>
                                     <span className={classes.editableTextArrayDragHandle} {...provided.dragHandleProps}><DragHandle /></span>
-                                    <EditableText text={entry} onSave={(text) => save(index, text)} onDelete={() => save(index, undefined)} />
+                                    <EditableText autoFocus={selectedIndex === index} isValid={isValid(index)} text={entry} onSave={(text, options) => save(index, text, options)} onDelete={(options) => save(index, undefined, options)} />
                                 </div>
                             }
                         </Draggable>;
@@ -473,15 +530,17 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
             </Droppable>
         </DragDropContext>
         <div className={classes.editableTextArrayAddRow}>
-            <EditableText holderClassName={classes.editableTextArrayAddText} placeHolder={placeholder} onSave={(text) => {
+            <EditableText key={entries.length} autoFocus={selectedIndex === entries.length} isValid={isValid(-1)} holderClassName={classes.editableTextArrayAddText} placeHolder={placeholder} onSave={(text) => {
                 if (text) {
                     const newEntries = [...entries, text];
                     onSave(newEntries);
+                    setSelectedIndex(newEntries.length);
                 }
-            }}/>
+            }}
+            />
         </div>
         <Spacer />
-    </>;
+    </div>;
 }
 
 const ChoiceQuestionEditor: Editor<ChoiceQuestion> = (props) => {
