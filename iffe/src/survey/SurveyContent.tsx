@@ -15,6 +15,7 @@ export interface TextBlock extends Content {
 
 export interface Question extends Content {
     readonly type: SurveyQuestion["type"];
+    questionNumber?: number;
 }
 
 export interface TextQuestion extends Question {
@@ -47,6 +48,10 @@ export interface ChoiceGridQuestion extends Question {
 export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion;
 export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
 
-export function isQuestion(c: Content) {
+export function isQuestion(c: Content): c is Question {
     return !(c.type === 'SectionHeader' || c.type === 'TextBlock');
+}
+
+export function isSectionHeader(c: Content): c is SectionHeader {
+    return c.type === 'SectionHeader';
 }

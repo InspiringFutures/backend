@@ -38,6 +38,10 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import FilterNoneIcon from '@material-ui/icons/FilterNone';
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 import DragIndicatorIcon from '@material-ui/icons/DragIndicator';
+import SmartphoneIcon from '@material-ui/icons/Smartphone';
+import TabletIcon from '@material-ui/icons/Tablet';
+import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
+import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -65,7 +69,7 @@ import { ulid } from "ulid";
 import {
     ChoiceGridQuestion,
     ChoiceQuestion,
-    Content, isQuestion,
+    Content, isQuestion, isSectionHeader,
     ParagraphQuestion,
     Question,
     SectionHeader,
@@ -234,6 +238,10 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         questionTypeMenu: {
             padding: 0,
+        },
+        previewTitle: {
+            display: 'flex',
+            flexDirection: 'row',
         },
     }),
 );
@@ -928,40 +936,170 @@ class MakeDialog extends React.Component<MakeDialogProps, MakeDialogState> {
     }
 }
 
-function PreviewDialog({isOpen, close, contents}: (InjectedDialogProps & {contents: Content[]})) {
-    const descriptionElementRef = React.useRef<HTMLElement>(null);
-    React.useEffect(() => {
-        if (isOpen) {
-            const { current: descriptionElement } = descriptionElementRef;
-            if (descriptionElement !== null) {
-                descriptionElement.focus();
-            }
-        }
-    }, [isOpen]);
+interface PreviewTypeMenuProps {
+    type: "mobile" | "tablet";
+    setType: (type: PreviewTypeMenuProps["type"]) => void;
+}
 
-    console.log(contents);
+const PreviewTypeInfo = {
+    mobile: {icon: <SmartphoneIcon />,name: "Mobile"},
+    tablet: {icon: <TabletIcon /> ,name: "Tablet"},
+};
 
+function PreviewTypeMenu({type, setType}: PreviewTypeMenuProps) {
+    const classes = useStyles();
+
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+    const handleClickListItem = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuItemClick = (event: React.MouseEvent<HTMLElement>, option: PreviewTypeMenuProps["type"]) => {
+        setType(option);
+        setAnchorEl(null);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const selected = PreviewTypeInfo[type];
+
+    return (
+        <>
+            <List component="nav" className={classes.questionTypeMenu}>
+                <ListItem
+                    button
+                    aria-haspopup="true"
+                    onClick={handleClickListItem}
+                    className={classes.questionTypeMenu}
+                >
+                    <ListItemIcon>{selected.icon}</ListItemIcon>
+                    <ListItemText primary={selected.name} />
+                    <ListItemIcon><ArrowDropDownIcon /></ListItemIcon>
+                </ListItem>
+            </List>
+            <Menu
+                anchorEl={anchorEl}
+                keepMounted
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+            >
+                {Object.keys(PreviewTypeInfo).map((optionAsString, index) => {
+                    const option = optionAsString as PreviewTypeMenuProps["type"];
+                    return (
+                        <MenuItem
+                            key={option}
+                            selected={option === type}
+                            onClick={(event) => handleMenuItemClick(event, option)}
+                        >
+                            <ListItemIcon>{PreviewTypeInfo[option].icon}</ListItemIcon>
+                            {PreviewTypeInfo[option].name}
+                        </MenuItem>
+                    );
+                })}
+            </Menu>
+        </>
+    );
+}
+
+function PreviewTablet({contents}: {contents: Content[]}) {
     let questionNum = 1;
+    return <>
+        {contents.map(content => {
+            let questionHeading = null;
+            if (isQuestion(content)) {
+                questionHeading = <h4>Question {questionNum++}</h4>;
+            }
+            return <React.Fragment key={content.id}>
+                {questionHeading}
+                <ContentViewer content={content}/>
+            </React.Fragment>;
+        })}
+    </>;
+}
+
+type Section = { header: SectionHeader; content: Content [] };
+
+function makeSectionMap(contents: Content[]) {
+    const sections: Section[] = [];
+    const initialSection: Section = {header: {type: "SectionHeader", id: "missingSectionHeader", title: "Missing Header", description: "These questions are not in a section; add a Section at the beginning of the survey."}, content: []};
+    let currentSection = initialSection;
+    let questionNum = 1;
+    contents.forEach(c => {
+        if (isSectionHeader(c)) {
+            currentSection = {header: c, content: []};
+            sections.push(currentSection);
+        } else {
+            if (isQuestion(c)) {
+                c.questionNumber = questionNum++;
+            }
+            currentSection.content.push(c);
+        }
+    });
+    if (initialSection.content.length > 0) {
+        sections.unshift(initialSection);
+    }
+    return sections;
+}
+
+function PreviewMobile({contents}: {contents: Content[]}) {
+    const sections = useMemo(() => makeSectionMap(contents), [contents]);
+    const [currentSection, setCurrentSection] = useState(0);
+
+    useEffect(() => {
+        if (currentSection >= contents.length) {
+            setCurrentSection(contents.length - 1);
+        }
+    }, [contents.length, currentSection]);
+
+    const section = sections[currentSection];
+
+    return <>
+        <div style={{display: 'flex'}}>
+            <IconButton disabled={currentSection === 0} onClick={() => setCurrentSection(num => num - 1)}><ChevronLeftIcon /></IconButton>
+            <Spacer />
+            <IconButton disabled={currentSection === sections.length - 1} onClick={() => setCurrentSection(num => num + 1)}><ChevronRightIcon /></IconButton>
+        </div>
+        <ContentViewer content={section.header} />
+        {section.content.map(content => {
+            let questionHeading = null;
+            if (isQuestion(content)) {
+                questionHeading = <h4>Question {content.questionNumber}</h4>;
+            }
+            return <React.Fragment key={content.id}>
+                {questionHeading}
+                <ContentViewer content={content}/>
+            </React.Fragment>;
+        })}
+    </>;
+}
+
+function PreviewDialog({isOpen, close, contents}: (InjectedDialogProps & {contents: Content[]})) {
+    const classes = useStyles();
+
+    const [mode, setMode] = useState<PreviewTypeMenuProps["type"]>("mobile");
+
     return (
             <Dialog
                 open={isOpen}
                 onClose={close}
                 scroll="paper"
-                aria-labelledby="scroll-dialog-title"
-                aria-describedby="scroll-dialog-description"
+                maxWidth={mode === "tablet" ? false : "xs"}
+                fullWidth
             >
-                <DialogTitle id="scroll-dialog-title">Preview</DialogTitle>
+                <DialogTitle disableTypography className={classes.previewTitle}>
+                    <Typography variant="h6">Preview</Typography>
+                    <Spacer/>
+                    <PreviewTypeMenu type={mode} setType={(mode) => setMode(mode)}/>
+                </DialogTitle>
                 <DialogContent dividers>
-                    {contents.map(content => {
-                        let questionHeading = null;
-                        if (isQuestion(content)) {
-                            questionHeading = <h4>Question {questionNum++}</h4>;
-                        }
-                        return <>
-                            {questionHeading}
-                            <ContentViewer key={content.id} content={content}/>
-                        </>;
-                    })}
+                    {mode === "tablet" ?
+                        <PreviewTablet contents={contents}/>
+                        :
+                        <PreviewMobile contents={contents}/>
+                    }
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={close} color="primary">
@@ -1074,7 +1212,7 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
         {"type":"ChoiceGridQuestion","id":"01EYR69KRPQNGSWN1E3VVM8R4J","rows":["Creative activity is an important part of my life","I am good at some creative activities","I have skills that would allow me to work in the arts world","I am more myself when doing a creative activity than the rest of the time"],"title":"Please tick to show how much you agree or disagree with the following statements. Answer for how you generally feel.","columns":["Strongly Agree","Agree","Neutral","Disagree","Strongly Disagree"]},
         {type: "SectionHeader", id: "01EYV1MK19BXCPVS3YZ40MEQ6B", title: "About You"},
         {type: "TextQuestion", id: "01EYV1R3QMJCSJ105S1BKDDYE4", title: "Describe yourself in three words", placeholder: "You can use anything that makes sense to you."},
-        {type: "TextBlock", id: "01EYV22JNZKMQ4FM4SYWA3Q4M6", title: "We’re asking for a bit of info about you so that w… others. Please answer as accurately as you can."},
+        {type: "TextBlock", id: "01EYV22JNZKMQ4FM4SYWA3Q4M6", title: "We’re asking for a bit of info about you so that we can see if some people are less able to access arts programmes in the criminal justice system than others. Please answer as accurately as you can."},
         {type: "ChoiceQuestion", id: "01EYV1MMHQKR057CC41HKNE5C7", title: "Please enter your ethnicity", choices: ["White", "Black", "Asian", "Other"]},
     ]);
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
