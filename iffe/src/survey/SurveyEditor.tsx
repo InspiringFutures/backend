@@ -1,6 +1,6 @@
 import React, {
     forwardRef,
-    FunctionComponent,
+    FunctionComponent, PropsWithChildren,
     useCallback,
     useContext,
     useEffect, useMemo,
@@ -56,7 +56,7 @@ import { ulid } from "ulid";
 import {
     ChoiceGridQuestion, ChoiceQuestion,
     Content,
-    ParagraphQuestion,
+    ParagraphQuestion, Question,
     SectionHeader, SurveyContent,
     TextBlock,
     TextQuestion,
@@ -187,6 +187,14 @@ interface SurveyInfo {
     name: string;
 }
 
+const QuestionTypeInfo = {
+    "TextQuestion": {icon: <ShortTextIcon />, name: "Short answer"},
+    "YesNoQuestion": {icon: <ThumbsUpDownIcon />, name: "Yes/no"},
+    "ParagraphQuestion": {icon: <ViewHeadlineIcon />, name: "Paragraph"},
+    "ChoiceQuestion": {icon: <RadioButtonCheckedIcon />, name: "Choice"},
+    "ChoiceGridQuestion": {icon: <GridOnIcon />, name: "Choice grid"},
+};
+
 function Spacer({width}: {width?: number}) {
     return <span style={width ? {width} : {flexGrow: 1}} />;
 }
@@ -311,36 +319,47 @@ const TextBlockEditor: Editor<TextBlock> = ({content, modify}) => {
     return <Typography className={classes.editableWrapper}><span>Text:</span><Spacer width={8} /><EditableText multiLine text={content.title} onSave={text => modify({...content, title: text})} /></Typography>;
 };
 
-const TextQuestionEditor: Editor<TextQuestion> = ({content, modify}) => {
+const QuestionEditor = function<Q extends Question> ({content, modify, children}: PropsWithChildren<EditorProps<Q>>) {
     const classes = useStyles();
 
+    const info = QuestionTypeInfo[content.type];
+
     return <>
-        <Typography className={classes.editableWrapper}><ShortTextIcon className={classes.questionIcon} />Short answer question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
-        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
-        <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
-        <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
+        <Typography className={classes.editableWrapper}>
+            <EditableText text={content.title} placeHolder="Question" onSave={text => modify({...content, title: text})}/>
+            {info.icon}{info.name} question
+        </Typography>
+        <Typography className={classes.editableWrapper}>
+            <span>Description:</span>
+            <Spacer width={8}/>
+            <EditableText multiLine
+                          placeHolder="Additional description that appears under this question."
+                          text={content.description}
+                          onSave={text => modify({...content, description: text})}/></Typography>
+        {children}
     </>;
 };
 
-const YesNoQuestionEditor: Editor<YesNoQuestion> = ({content, modify}) => {
+const TextQuestionEditor: Editor<TextQuestion> = (props) => {
     const classes = useStyles();
+    const {content, modify} = props;
 
-    return <>
-        <Typography className={classes.editableWrapper}><ThumbsUpDownIcon className={classes.questionIcon} />Yes/no question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
-        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
-        <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
-    </>;
+    return <QuestionEditor {...props}>
+        <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
+    </QuestionEditor>;
 };
 
-const ParagraphQuestionEditor: Editor<ParagraphQuestion> = ({content, modify}) => {
-    const classes = useStyles();
+const YesNoQuestionEditor: Editor<YesNoQuestion> = (props) => {
+    return <QuestionEditor {...props} />
+};
 
-    return <>
-        <Typography className={classes.editableWrapper}><ViewHeadlineIcon className={classes.questionIcon} />Paragraph question: <EditableText text={content.title} onSave={text => modify({...content, title: text})} /></Typography>
-        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8} />
-        <EditableText multiLine placeHolder="Additional description that appears under this question." text={content.description} onSave={text => modify({...content, description: text})} /></Typography>
+const ParagraphQuestionEditor: Editor<ParagraphQuestion> = (props) => {
+    const classes = useStyles();
+    const {content, modify} = props;
+
+    return <QuestionEditor {...props}>
         <Typography className={classes.editableWrapper}>Placeholder: <EditableText placeHolder="This can be shown to clients if they haven't entered an answer." text={content.placeholder} onSave={text => modify({...content, placeholder: text})} /></Typography>
-    </>;
+    </QuestionEditor>;
 };
 
 interface EditableTextArrayProps {
@@ -402,19 +421,11 @@ function EditableTextArray({onSave, entries, placeholder}: EditableTextArrayProp
     </>;
 }
 
-const ChoiceQuestionEditor: Editor<ChoiceQuestion> = ({content, modify}) => {
+const ChoiceQuestionEditor: Editor<ChoiceQuestion> = (props) => {
     const classes = useStyles();
+    const {content, modify} = props;
 
-    return <>
-        <Typography className={classes.editableWrapper}><RadioButtonCheckedIcon className={classes.questionIcon}/>Choice question: <EditableText text={content.title} onSave={text => modify({
-            ...content,
-            title: text
-        })}/></Typography>
-        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8}/>
-            <EditableText multiLine
-                          placeHolder="Additional description that appears under this question."
-                          text={content.description}
-                          onSave={text => modify({...content, description: text})}/></Typography>
+    return <QuestionEditor {...props}>
         <div className={classes.choiceGridColumns}>
             <div className={classes.choiceGridColumn}>
                 <EditableTextArray placeholder="Add choice" entries={content.choices || []} onSave={(choices) => modify({...content, choices})} />
@@ -424,22 +435,15 @@ const ChoiceQuestionEditor: Editor<ChoiceQuestion> = ({content, modify}) => {
                 />
             </div>
         </div>
-    </>;
+    </QuestionEditor>;
 };
 
-const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = ({content, modify}) => {
+const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
     const classes = useStyles();
 
-    return <>
-        <Typography className={classes.editableWrapper}><GridOnIcon className={classes.questionIcon}/>Choice grid question: <EditableText text={content.title} onSave={text => modify({
-                ...content,
-                title: text
-            })}/></Typography>
-        <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8}/>
-            <EditableText multiLine
-                          placeHolder="Additional description that appears under this question."
-                          text={content.description}
-                          onSave={text => modify({...content, description: text})}/></Typography>
+    const {content, modify} = props;
+
+    return <QuestionEditor {...props}>
         <div className={classes.choiceGridColumns}>
             <div className={classes.choiceGridColumn}>
                 <h4>Rows</h4>
@@ -450,7 +454,7 @@ const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = ({content, modify})
                 <EditableTextArray placeholder="Add column" entries={content.columns || []} onSave={(columns) => modify({...content, columns})} />
             </div>
         </div>
-    </>;
+    </QuestionEditor>;
 };
 
 type ViewerProps<C extends Content> = {
@@ -608,16 +612,30 @@ const ContentViewer =({content}: ViewerProps<Content>) => {
     return <Viewer content={content as any}/>;
 };
 
-const sidebarItems: ({index: number; icon: any; name: string; type: Content["type"]} | null)[] = [
-    {index: 0, icon: <FormatLineSpacingIcon />, name: "Section", type: "SectionHeader"},
-    {index: 1, icon: <TextFieldsIcon />, name: "Explanatory Text", type: "TextBlock"},
-    null,
-    {index: 2, icon: <ShortTextIcon />, name: "Short answer", type: "TextQuestion"},
-    {index: 3, icon: <ThumbsUpDownIcon />, name: "Yes/no", type: "YesNoQuestion"},
-    {index: 4, icon: <ViewHeadlineIcon />, name: "Paragraph", type: "ParagraphQuestion"},
-    {index: 5, icon: <RadioButtonCheckedIcon />, name: "Choice", type: "ChoiceQuestion"},
-    {index: 6, icon: <GridOnIcon />, name: "Choice grid", type: "ChoiceGridQuestion"},
-];
+const ContentTypeInfo = {
+    "SectionHeader": {icon: <FormatLineSpacingIcon />, name: "Section"},
+    "TextBlock": {icon: <TextFieldsIcon />, name: "Explanatory Text"},
+    ...QuestionTypeInfo
+};
+
+function getSidebarItems() {
+    let index = 0;
+    const pick = (type: Content["type"]) => {
+        return {index: index++, ...ContentTypeInfo[type], type};
+    }
+    return [
+        pick("SectionHeader"),
+        pick("TextBlock"),
+        null,
+        pick("TextQuestion"),
+        pick("YesNoQuestion"),
+        pick("ParagraphQuestion"),
+        pick("ChoiceQuestion"),
+        pick("ChoiceGridQuestion"),
+    ];
+}
+
+const sidebarItems: ({index: number; icon: any; name: string; type: Content["type"]} | null)[] = getSidebarItems();
 
 interface EditorState {
     activeQuestion?: string;

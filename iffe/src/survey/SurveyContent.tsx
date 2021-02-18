@@ -13,31 +13,36 @@ export interface TextBlock extends Content {
     readonly type: "TextBlock";
 }
 
-export interface TextQuestion extends Content {
+export interface Question extends Content {
+    readonly type: SurveyQuestion["type"];
+}
+
+export interface TextQuestion extends Question {
     readonly type: "TextQuestion";
     placeholder?: string;
 }
 
-export interface YesNoQuestion extends Content {
+export interface YesNoQuestion extends Question {
     readonly type: "YesNoQuestion";
 }
 
-export interface ParagraphQuestion extends Content {
+export interface ParagraphQuestion extends Question {
     readonly type: "ParagraphQuestion";
     placeholder?: string;
 }
 
-export interface ChoiceQuestion extends Content {
+export interface ChoiceQuestion extends Question {
     readonly type: "ChoiceQuestion";
     choices?: string[];
     allowOther?: boolean;
 }
 
-export interface ChoiceGridQuestion extends Content {
+export interface ChoiceGridQuestion extends Question {
     readonly type: "ChoiceGridQuestion";
     rows?: string[];
     columns?: string[];
 }
 
 
-export type SurveyContent = SectionHeader | TextBlock | TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion;
+export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion;
+export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
