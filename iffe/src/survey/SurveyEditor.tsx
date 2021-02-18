@@ -44,7 +44,8 @@ import {
     DialogTitle, FormControl,
     FormControlLabel,
     FormLabel,
-    IconButton,
+    IconButton, Menu,
+    MenuItem,
     Paper,
     Radio,
     RadioGroup,
@@ -299,7 +300,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
 
 type EditorProps<C extends Content> = {
     content: C;
-    modify: (newContent: C) => void;
+    modify: (newContent: SurveyContent) => void;
 };
 type Editor<C extends Content> = FunctionComponent<EditorProps<C>>;
 
@@ -319,23 +320,83 @@ const TextBlockEditor: Editor<TextBlock> = ({content, modify}) => {
     return <Typography className={classes.editableWrapper}><span>Text:</span><Spacer width={8} /><EditableText multiLine text={content.title} onSave={text => modify({...content, title: text})} /></Typography>;
 };
 
+interface QuestionTypeMenuProps {
+    type: Question["type"];
+    setType: (type: Question["type"]) => void;
+}
+
+function QuestionTypeMenu({type, setType}: QuestionTypeMenuProps) {
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+    const handleClickListItem = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuItemClick = (event: React.MouseEvent<HTMLElement>, option: Question["type"]) => {
+        setType(option);
+        setAnchorEl(null);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const selected = QuestionTypeInfo[type];
+
+    return (
+        <>
+            <List component="nav">
+                <ListItem
+                    button
+                    aria-haspopup="true"
+                    onClick={handleClickListItem}
+                >
+                    <ListItemIcon>{selected.icon}</ListItemIcon>
+                    <ListItemText primary="Question type" secondary={selected.name} />
+                </ListItem>
+            </List>
+            <Menu
+                anchorEl={anchorEl}
+                keepMounted
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+            >
+                {Object.keys(QuestionTypeInfo).map((optionAsString, index) => {
+                    const option = optionAsString as Question["type"];
+                    return (
+                        <MenuItem
+                            key={option}
+                            selected={option === type}
+                            onClick={(event) => handleMenuItemClick(event, option)}
+                        >
+                            <ListItemIcon>{QuestionTypeInfo[option].icon}</ListItemIcon>
+                            {QuestionTypeInfo[option].name}
+                        </MenuItem>
+                    );
+                })}
+            </Menu>
+        </>
+    );
+}
+
 const QuestionEditor = function<Q extends Question> ({content, modify, children}: PropsWithChildren<EditorProps<Q>>) {
     const classes = useStyles();
 
-    const info = QuestionTypeInfo[content.type];
-
     return <>
-        <Typography className={classes.editableWrapper}>
+        <div className={classes.editableWrapper}>
             <EditableText text={content.title} placeHolder="Question" onSave={text => modify({...content, title: text})}/>
-            {info.icon}{info.name} question
-        </Typography>
-        <Typography className={classes.editableWrapper}>
+            <QuestionTypeMenu type={content.type} setType={(type) => {
+                modify({type, title: content.title, description: content.description, id: content.id});
+            }} />
+        </div>
+        <div className={classes.editableWrapper}>
             <span>Description:</span>
             <Spacer width={8}/>
             <EditableText multiLine
                           placeHolder="Additional description that appears under this question."
                           text={content.description}
-                          onSave={text => modify({...content, description: text})}/></Typography>
+                          onSave={text => modify({...content, description: text})}/>
+        </div>
         {children}
     </>;
 };
