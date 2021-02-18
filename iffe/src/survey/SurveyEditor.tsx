@@ -46,7 +46,7 @@ import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import { RouteComponentProps } from "@reach/router";
 import {
     Button,
-    Checkbox,
+    Checkbox, createMuiTheme,
     Dialog,
     DialogActions,
     DialogContent,
@@ -62,6 +62,7 @@ import {
     RadioGroup,
     TextareaAutosize,
     TextField,
+    ThemeProvider,
     Tooltip
 } from "@material-ui/core";
 import { ulid } from "ulid";
@@ -80,6 +81,16 @@ import {
 } from "./SurveyContent";
 
 const drawerWidth = 240;
+
+const theme = createMuiTheme({
+    overrides: {
+        MuiFormLabel: {
+            root: {
+                color: '#000',
+            },
+        },
+    },
+});
 
 const useStyles = makeStyles((theme: Theme) =>
     createStyles({
@@ -107,7 +118,7 @@ const useStyles = makeStyles((theme: Theme) =>
             top: 64,
             bottom: 0,
             left: 0,
-            right: 240,
+            right: drawerWidth,
             padding: theme.spacing(2),
             overflowY: 'scroll',
         },
@@ -242,6 +253,9 @@ const useStyles = makeStyles((theme: Theme) =>
         previewTitle: {
             display: 'flex',
             flexDirection: 'row',
+        },
+        description: {
+            color: '#37474f',
         },
     }),
 );
@@ -659,10 +673,17 @@ type ViewerProps<C extends Content> = {
 };
 type Viewer<C extends Content> = FunctionComponent<ViewerProps<C>>;
 
+const Description: Viewer<Content> = ({content}) => {
+    const classes = useStyles();
+    return content.description ?
+        <Typography className={classes.description}>{escapedNewLineToLineBreakTag(content.description)}</Typography>
+        : null;
+};
+
 const SectionHeaderViewer: Viewer<SectionHeader> = ({content}) => {
     return <>
         <Typography variant="h4">{content.title ? content.title : <em>Untitled Section</em>}</Typography>
-        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        <Description content={content} />
     </>;
 };
 
@@ -673,7 +694,7 @@ const TextBlockViewer: Viewer<TextBlock> = ({content}) => {
 const TextQuestionViewer: Viewer<TextQuestion> = ({content}) => {
     return <>
         <TextField label={content.title} placeholder={content.placeholder} fullWidth />
-        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        <Description content={content} />
     </>;
 };
 
@@ -684,14 +705,14 @@ const YesNoQuestionViewer: Viewer<YesNoQuestion> = ({content}) => {
             <FormControlLabel value="yes" control={<Radio />} label="Yes" />
             <FormControlLabel value="no" control={<Radio />} label="No" />
         </RadioGroup>
-        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        <Description content={content} />
     </>;
 };
 
 const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
     return <>
         <TextField label={content.title} placeholder={content.placeholder} fullWidth multiline rows={4} rowsMax={10} />
-        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        <Description content={content} />
     </>;
 };
 
@@ -703,7 +724,7 @@ const ChoiceQuestionViewer: Viewer<ChoiceQuestion> = ({content}) => {
     let selectOther = () => setValue("other");
     return <FormControl>
         <FormLabel>{content.title}</FormLabel>
-        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        <Description content={content} />
         {choices.length > 0 ?
             <RadioGroup value={value} onChange={(e) => setValue(e.currentTarget.value)}>
                 {choices.map((choice, index) => <FormControlLabel key={index} value={"c" + index} control={<Radio />} label={choice}/>)}
@@ -744,7 +765,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
 
     return <>
         <FormLabel>{content.title}</FormLabel>
-        {content.description && <Typography>{escapedNewLineToLineBreakTag(content.description)}</Typography>}
+        <Description content={content} />
         {rows.length > 0 && columns.length > 0 ?
             <table>
                 <thead>
@@ -1241,7 +1262,7 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
 
     const hasSingleSection = content.filter(c => c.type === 'SectionHeader').length === 1;
 
-    return (
+    return (<ThemeProvider theme={theme}>
         <DragDropContext onDragEnd={onDragEnd}><div className={classes.root}>
             <MakeDialog ref={previewDialog}>{({isOpen, open, close}) => <PreviewDialog isOpen={isOpen} open={open} close={close} contents={content} />}</MakeDialog>
             <AppBar position="fixed" className={classes.appBar}>
@@ -1365,5 +1386,5 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
             </Drawer>
         </div>
         </DragDropContext>
-    );
+    </ThemeProvider>);
 }
