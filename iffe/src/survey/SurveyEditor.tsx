@@ -42,6 +42,7 @@ import SmartphoneIcon from '@material-ui/icons/Smartphone';
 import TabletIcon from '@material-ui/icons/Tablet';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import CheckBoxIcon from '@material-ui/icons/CheckBox';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -68,6 +69,7 @@ import {
 import { ulid } from "ulid";
 
 import {
+    CheckboxQuestion,
     ChoiceGridQuestion,
     ChoiceQuestion,
     Content, isQuestion, isSectionHeader,
@@ -274,6 +276,7 @@ const QuestionTypeInfo = {
     "YesNoQuestion": {icon: <ThumbsUpDownIcon />, name: "Yes/no"},
     "ParagraphQuestion": {icon: <ViewHeadlineIcon />, name: "Paragraph"},
     "ChoiceQuestion": {icon: <RadioButtonCheckedIcon />, name: "Choice"},
+    "CheckboxQuestion": {icon: <CheckBoxIcon />, name: "Checkboxes"},
     "ChoiceGridQuestion": {icon: <GridOnIcon />, name: "Choice grid"},
 };
 
@@ -651,6 +654,23 @@ const ChoiceQuestionEditor: Editor<ChoiceQuestion> = (props) => {
     </QuestionEditor>;
 };
 
+const CheckboxQuestionEditor: Editor<CheckboxQuestion> = (props) => {
+    const classes = useStyles();
+    const {content, modify} = props;
+
+    return <QuestionEditor {...props}>
+        <div className={classes.choiceGridColumns}>
+            <div className={classes.choiceGridColumn}>
+                <EditableTextArray heading="Options" placeholder="Add option" entries={content.choices || []} onSave={(choices) => modify({...content, choices})} />
+                <FormControlLabel
+                    control={<Checkbox checked={!!content.allowOther} onChange={(e) => modify({...content, allowOther: e.target.checked})} />}
+                    label={"Allow user to type an \"Other\" option"}
+                />
+            </div>
+        </div>
+    </QuestionEditor>;
+};
+
 const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
     const classes = useStyles();
 
@@ -730,7 +750,33 @@ const ChoiceQuestionViewer: Viewer<ChoiceQuestion> = ({content}) => {
                 {choices.map((choice, index) => <FormControlLabel key={index} value={"c" + index} control={<Radio />} label={choice}/>)}
                 {content.allowOther && <FormControlLabel value="other" control={<Radio />} label={<span>Other: <TextField onClick={selectOther} onChange={selectOther} /></span>} />}
             </RadioGroup>
-        :   <em>No rows/columns defined</em>
+        :   <em>No choices defined</em>
+        }
+    </FormControl>;
+};
+
+const CheckboxQuestionViewer: Viewer<CheckboxQuestion> = ({content}) => {
+    const choices = content.choices || [];
+    const [otherChecked, setOtherChecked] = useState(false);
+
+    const otherRef = useRef<HTMLInputElement>(null);
+
+    return <FormControl>
+        <FormLabel>{content.title}</FormLabel>
+        <Description content={content} />
+        {choices.length > 0 ?
+            <>
+                {choices.map((choice, index) => <FormControlLabel key={index} value={"c" + index} control={<Checkbox />} label={choice}/>)}
+                {content.allowOther && <FormControlLabel value="other" checked={otherChecked} onChange={(e, checked) => {
+                    setOtherChecked(checked);
+                    if (checked && otherRef.current) otherRef.current.focus();
+                }} control={<Checkbox />} label={<span>Other: <TextField onChange={(e) => {
+                    if (e.target.value !== "") {
+                        setOtherChecked(true);
+                    }
+                }} inputRef={otherRef} /></span>} />}
+            </>
+            :   <em>No options defined</em>
         }
     </FormControl>;
 };
@@ -792,6 +838,7 @@ const Editors: {[name in Content["type"]]: Editor<any>} = {
     "YesNoQuestion": YesNoQuestionEditor,
     "ParagraphQuestion": ParagraphQuestionEditor,
     "ChoiceQuestion": ChoiceQuestionEditor,
+    "CheckboxQuestion": CheckboxQuestionEditor,
     "ChoiceGridQuestion": ChoiceGridQuestionEditor,
 };
 
@@ -802,6 +849,7 @@ const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "YesNoQuestion": YesNoQuestionViewer,
     "ParagraphQuestion": ParagraphQuestionViewer,
     "ChoiceQuestion": ChoiceQuestionViewer,
+    "CheckboxQuestion": CheckboxQuestionViewer,
     "ChoiceGridQuestion": ChoiceGridQuestionViewer,
 };
 
@@ -892,6 +940,7 @@ function getSidebarItems() {
         pick("YesNoQuestion"),
         pick("ParagraphQuestion"),
         pick("ChoiceQuestion"),
+        pick("CheckboxQuestion"),
         pick("ChoiceGridQuestion"),
     ];
 }

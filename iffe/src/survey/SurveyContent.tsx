@@ -38,6 +38,12 @@ export interface ChoiceQuestion extends Question {
     allowOther?: boolean;
 }
 
+export interface CheckboxQuestion extends Question {
+    readonly type: "CheckboxQuestion";
+    choices?: string[];
+    allowOther?: boolean;
+}
+
 export interface ChoiceGridQuestion extends Question {
     readonly type: "ChoiceGridQuestion";
     rows?: string[];
@@ -45,7 +51,7 @@ export interface ChoiceGridQuestion extends Question {
 }
 
 
-export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion;
+export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion | CheckboxQuestion;
 export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
 
 export function isQuestion(c: Content): c is Question {
