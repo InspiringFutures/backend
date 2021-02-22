@@ -76,7 +76,7 @@ import {
     ParagraphQuestion,
     Question,
     SectionHeader,
-    SurveyContent,
+    SurveyContent, SurveyQuestion,
     TextBlock,
     TextQuestion,
     YesNoQuestion
@@ -499,7 +499,7 @@ function QuestionTypeMenu({type, setType}: QuestionTypeMenuProps) {
     );
 }
 
-const QuestionEditor = function<Q extends Question> ({content, modify, children}: PropsWithChildren<EditorProps<Q>>) {
+const QuestionEditor = function({content, modify, children}: PropsWithChildren<EditorProps<SurveyQuestion>>) {
     const classes = useStyles();
 
     return <>
@@ -519,7 +519,43 @@ const QuestionEditor = function<Q extends Question> ({content, modify, children}
             </div>
             <div>
                 <QuestionTypeMenu type={content.type} setType={(type) => {
-                    modify({type, title: content.title, description: content.description, id: content.id});
+                    let choices = undefined;
+                    let allowOther = undefined;
+                    let rows = undefined;
+                    let placeholder = undefined;
+                    switch (content.type) {
+                        case "CheckboxQuestion":
+                        case "ChoiceQuestion":
+                            choices = content.choices;
+                            allowOther = content.allowOther;
+                            break;
+                        case "ChoiceGridQuestion":
+                            choices = content.columns;
+                            rows = content.rows;
+                            break;
+                        case "YesNoQuestion":
+                            choices = ["No", "Yes"];
+                            break;
+                        case "TextQuestion":
+                        case "ParagraphQuestion":
+                            placeholder = content.placeholder;
+                    }
+                    const newContent: SurveyQuestion = {type, title: content.title, description: content.description, id: content.id};
+                    switch (newContent.type) {
+                        case "CheckboxQuestion":
+                        case "ChoiceQuestion":
+                            newContent.choices = choices;
+                            newContent.allowOther = allowOther;
+                            break;
+                        case "ChoiceGridQuestion":
+                            newContent.columns = choices;
+                            newContent.rows = rows;
+                            break;
+                        case "TextQuestion":
+                        case "ParagraphQuestion":
+                            newContent.placeholder = placeholder;
+                    }
+                    modify(newContent);
                 }} />
             </div>
         </div>
@@ -647,7 +683,7 @@ const ChoiceQuestionEditor: Editor<ChoiceQuestion> = (props) => {
                 <EditableTextArray heading="Choices" placeholder="Add choice" entries={content.choices || []} onSave={(choices) => modify({...content, choices})} />
                 <FormControlLabel
                     control={<Checkbox checked={!!content.allowOther} onChange={(e) => modify({...content, allowOther: e.target.checked})} />}
-                    label={"Allow user to type an \"Other\" option"}
+                    label={"Allow user to type an \"Other\" choice"}
                 />
             </div>
         </div>
