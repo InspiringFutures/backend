@@ -47,7 +47,8 @@ import CheckBoxIcon from '@material-ui/icons/CheckBox';
 import { RouteComponentProps } from "@reach/router";
 import {
     Button,
-    Checkbox, createMuiTheme,
+    Checkbox,
+    createMuiTheme,
     Dialog,
     DialogActions,
     DialogContent,
@@ -73,11 +74,14 @@ import {
     CheckboxQuestion,
     ChoiceGridQuestion,
     ChoiceQuestion,
-    Content, isQuestion, isSectionHeader,
+    Content,
+    isQuestion,
+    isSectionHeader,
     ParagraphQuestion,
     Question,
     SectionHeader,
-    SurveyContent, SurveyQuestion,
+    SurveyContent,
+    SurveyQuestion,
     TextBlock,
     TextQuestion,
     YesNoQuestion
@@ -155,6 +159,7 @@ const useStyles = makeStyles((theme: Theme) =>
             flexGrow: 1,
             display: 'flex',
             border: 'solid 1px transparent',
+            alignItems: 'center',
         },
         editableInput: {
             font: 'inherit',
@@ -187,6 +192,13 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         editableMultilineContents: {
             flexGrow: 1,
+        },
+        editableCheckbox: {
+            marginTop: -9,
+            marginBottom: -9,
+        },
+        editableLabelSelected: {
+            color: '#777',
         },
         placeholder: {
             color: '#777',
@@ -300,6 +312,8 @@ type EditableTextProps = {
     holderClassName?: string;
     autoFocus?: boolean;
     isValid?: (newText: string | undefined) => string | undefined;
+    withCheckbox?: boolean;
+    label?: string;
 };
 
 export const escapedNewLineToLineBreakTag = (string: string) => string.split('\n').map((item: string, index: number) => (index === 0) ? item : [<br key={index} />, item])
@@ -312,7 +326,7 @@ type EditableTextAction =
     | {type: "update"; value: string}
     ;
 
-function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderClassName, autoFocus, isValid}: EditableTextProps) {
+const EditableText = ({text, onSave, multiLine, placeHolder, onDelete, holderClassName, autoFocus, isValid, withCheckbox, label}: EditableTextProps) => {
     const classes = useStyles();
     const wrapperRef = useRef<HTMLDivElement>(null);
     const [errorMessage, setErrorMessage] = useState<string>();
@@ -332,7 +346,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
                             if (isValid && !!isValid(current.value)) {
                                 alert("Not a valid value")
                                 return current;
-                            } else if (placeHolder) {
+                            } else if (placeHolder || withCheckbox) {
                                 onSave(undefined, action.options);
                             } else {
                                 if (text !== undefined) {
@@ -356,7 +370,7 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
             case 'update':
                 return {...current, value: action.value};
         }
-    }, [onSave, onDelete, isValid, placeHolder, text]), {isEditing: !!autoFocus});
+    }, [text, onDelete, isValid, placeHolder, withCheckbox, onSave]), {isEditing: !!autoFocus});
 
     useEffect(() => {
         if (autoFocus === true) {
@@ -392,28 +406,60 @@ function EditableText({text, onSave, multiLine, placeHolder, onDelete, holderCla
         }
     };
 
+    const selected = state.isEditing || (text !== undefined && text !== "");
+    const checkboxContent = withCheckbox ? <>
+        <Checkbox className={classes.editableCheckbox} checked={selected} onChange={(_, checked) => {
+            if (checked) {
+                if (!state.isEditing) {
+                    startEdit();
+                }
+            } else {
+                cancel();
+                onSave(undefined);
+            }
+        }} />
+    </>: null;
+
+    const labelElement = label && <>{selected ? <em className={classes.editableLabelSelected}>{label}:</em> : label}<Spacer width={8} /></>;
     return state.isEditing ?
         <span className={classes.editableOuterWrapper} ref={wrapperRef}>
+            {checkboxContent} {labelElement}
             {multiLine ?
-                <TextareaAutosize rowsMax={10} autoFocus className={classes.editableInput} value={state.value}
-                      onChange={e => setCurrent(e.target.value)} onKeyDown={handleKey}
-                      placeholder={placeHolder} onBlur={onBlur} />
+                <TextareaAutosize rowsMax={10} autoFocus className={classes.editableInput}
+                                  value={state.value}
+                                  onChange={e => setCurrent(e.target.value)} onKeyDown={handleKey}
+                                  placeholder={placeHolder} onBlur={onBlur}/>
                 :
                 <TextField autoFocus className={classes.editableInput} value={state.value}
-                       onChange={e => setCurrent(e.target.value)} onKeyDown={handleKey}
-                       placeholder={placeHolder} onBlur={onBlur}
-                       error={!!errorMessage} helperText={errorMessage}
-                       InputProps={{className: classes.editableInputInner}}
+                           onChange={e => setCurrent(e.target.value)} onKeyDown={handleKey}
+                           placeholder={placeHolder} onBlur={onBlur}
+                           error={!!errorMessage} helperText={errorMessage}
+                           InputProps={{className: classes.editableInputInner}}
                 />
             }
-            <IconButton className={classes.editableInlineButton} onClick={cancel}><CancelIcon /></IconButton>
-            <IconButton className={classes.editableInlineButton} onClick={() => save()}><CheckCircleIcon /></IconButton>
+            <IconButton className={classes.editableInlineButton}
+                        onClick={cancel}><CancelIcon/></IconButton>
+            <IconButton className={classes.editableInlineButton}
+                        onClick={() => save()}><CheckCircleIcon/></IconButton>
         </span>
-    : multiLine ?
-            <span className={classes.editableMultiline}><span className={classes.editableMultilineContents} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span></span>
-    :
-            <span className={`${classes.editableHolder} ${holderClassName}`} onClick={startEdit}>{text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}<Spacer />{onDelete && <IconButton className={classes.editableInlineButton} onClick={() => onDelete()} size="small"><DeleteIcon /></IconButton>}</span>;
-}
+        : multiLine ?
+            <span className={classes.editableMultiline}><span
+                className={classes.editableMultilineContents}
+                onClick={startEdit}>
+                {checkboxContent} {labelElement}
+                {text === undefined ?
+                    <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(text)}</span></span>
+            :
+            <span className={`${classes.editableHolder} ${holderClassName ?? ""}`}
+                  onClick={startEdit}>
+                {checkboxContent} {labelElement}
+                {text === undefined ?
+                    <i className={classes.placeholder}>{placeHolder}</i> : text}<Spacer/>
+                {onDelete &&
+                <IconButton className={classes.editableInlineButton} onClick={() => onDelete()}
+                            size="small"><DeleteIcon/></IconButton>}
+            </span>;
+};
 
 type EditorProps<C extends Content> = {
     content: C;
@@ -525,6 +571,7 @@ const QuestionEditor = function({content, modify, children}: PropsWithChildren<E
                     let allowOther = undefined;
                     let rows = undefined;
                     let placeholder = undefined;
+                    let commentsPrompt = undefined;
                     switch (content.type) {
                         case "CheckboxQuestion":
                         case "ChoiceQuestion":
@@ -535,6 +582,7 @@ const QuestionEditor = function({content, modify, children}: PropsWithChildren<E
                         case "CheckboxGridQuestion":
                             choices = content.columns;
                             rows = content.rows;
+                            commentsPrompt = content.commentsPrompt;
                             break;
                         case "YesNoQuestion":
                             choices = ["No", "Yes"];
@@ -554,6 +602,7 @@ const QuestionEditor = function({content, modify, children}: PropsWithChildren<E
                         case "CheckboxGridQuestion":
                             newContent.columns = choices;
                             newContent.rows = rows;
+                            newContent.commentsPrompt = commentsPrompt;
                             break;
                         case "TextQuestion":
                         case "ParagraphQuestion":
@@ -715,7 +764,6 @@ const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
     const classes = useStyles();
 
     const {content, modify} = props;
-
     return <QuestionEditor {...props}>
         <div className={classes.choiceGridColumns}>
             <div className={classes.choiceGridColumn}>
@@ -725,6 +773,11 @@ const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
                 <EditableTextArray heading="Columns" placeholder="Add column" entries={content.columns || []} onSave={(columns) => modify({...content, columns})} />
             </div>
         </div>
+        <Typography variant="body1" className={classes.editableWrapper}>
+            <EditableText withCheckbox label="Prompt user for additional comments" text={content.commentsPrompt} onSave={(value) => {
+                modify({...content, commentsPrompt: value});
+            }} />
+        </Typography>
     </QuestionEditor>;
 };
 
@@ -742,6 +795,11 @@ const CheckboxGridQuestionEditor: Editor<CheckboxGridQuestion> = (props) => {
                 <EditableTextArray heading="Columns" placeholder="Add column" entries={content.columns || []} onSave={(columns) => modify({...content, columns})} />
             </div>
         </div>
+        <Typography variant="body1" className={classes.editableWrapper}>
+            <EditableText withCheckbox label="Prompt user for additional comments" text={content.commentsPrompt} onSave={(value) => {
+                modify({...content, commentsPrompt: value});
+            }} />
+        </Typography>
     </QuestionEditor>;
 };
 
@@ -885,6 +943,9 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
                 </tbody>
             </table>
         :   <em>No rows/columns defined</em>}
+        {content.commentsPrompt &&
+            <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10} />
+        }
     </>;
 };
 
@@ -911,6 +972,9 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content}) => 
                 </tbody>
             </table>
             :   <em>No rows/columns defined</em>}
+        {content.commentsPrompt &&
+            <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10} />
+        }
     </>;
 };
 

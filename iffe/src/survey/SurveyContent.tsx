@@ -48,12 +48,14 @@ export interface CheckboxGridQuestion extends Question {
     readonly type: "CheckboxGridQuestion";
     rows?: string[];
     columns?: string[];
+    commentsPrompt?: string;
 }
 
 export interface ChoiceGridQuestion extends Question {
     readonly type: "ChoiceGridQuestion";
     rows?: string[];
     columns?: string[];
+    commentsPrompt?: string;
 }
 
 export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion | CheckboxQuestion | CheckboxGridQuestion;
