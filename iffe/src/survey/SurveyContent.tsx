@@ -27,6 +27,10 @@ export interface YesNoQuestion extends Question {
     readonly type: "YesNoQuestion";
 }
 
+export interface ConsentQuestion extends Question {
+    readonly type: "ConsentQuestion";
+}
+
 export interface ParagraphQuestion extends Question {
     readonly type: "ParagraphQuestion";
     placeholder?: string;
@@ -58,7 +62,7 @@ export interface ChoiceGridQuestion extends Question {
     commentsPrompt?: string;
 }
 
-export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion | CheckboxQuestion | CheckboxGridQuestion;
+export type SurveyQuestion = TextQuestion | YesNoQuestion | ConsentQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion | CheckboxQuestion | CheckboxGridQuestion;
 export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
 
 export function isQuestion(c: Content): c is Question {

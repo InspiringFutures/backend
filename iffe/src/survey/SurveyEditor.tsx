@@ -43,6 +43,7 @@ import TabletIcon from '@material-ui/icons/Tablet';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import CheckBoxIcon from '@material-ui/icons/CheckBox';
+import HowToRegIcon from '@material-ui/icons/HowToReg';
 
 import { RouteComponentProps } from "@reach/router";
 import {
@@ -73,7 +74,7 @@ import {
     CheckboxGridQuestion,
     CheckboxQuestion,
     ChoiceGridQuestion,
-    ChoiceQuestion,
+    ChoiceQuestion, ConsentQuestion,
     Content,
     isQuestion,
     isSectionHeader,
@@ -292,6 +293,7 @@ const QuestionTypeInfo = {
     "CheckboxQuestion": {icon: <CheckBoxIcon />, name: "Checkboxes"},
     "ChoiceGridQuestion": {icon: <DragIndicatorIcon />, name: "Choice grid"},
     "CheckboxGridQuestion": {icon: <GridOnIcon />, name: "Checkbox grid"},
+    "ConsentQuestion": {icon: <HowToRegIcon />, name: "Consent"}
 };
 
 function Spacer({width}: {width?: number}) {
@@ -547,14 +549,18 @@ function QuestionTypeMenu({type, setType}: QuestionTypeMenuProps) {
     );
 }
 
-const QuestionEditor = function({content, modify, children}: PropsWithChildren<EditorProps<SurveyQuestion>>) {
+interface QuestionEditorProps {
+    questionTitle?: string;
+}
+
+const QuestionEditor = function({content, modify, children, questionTitle}: PropsWithChildren<EditorProps<SurveyQuestion>> & QuestionEditorProps) {
     const classes = useStyles();
 
     return <>
         <div className={classes.questionEditor}>
             <div className={classes.questionEditorTitleDesc}>
                 <div className={classes.questionEditorTitle}>
-                    <EditableText text={content.title} placeHolder="Question" onSave={text => modify({...content, title: text})}/>
+                    <EditableText text={content.title} placeHolder={questionTitle ?? "Question"} onSave={text => modify({...content, title: text})}/>
                 </div>
                 <Typography variant="body1" className={classes.editableWrapper}>
                     <span>Description:</span>
@@ -627,6 +633,10 @@ const TextQuestionEditor: Editor<TextQuestion> = (props) => {
 
 const YesNoQuestionEditor: Editor<YesNoQuestion> = (props) => {
     return <QuestionEditor {...props} />
+};
+
+const ConsentQuestionEditor: Editor<ConsentQuestion> = (props) => {
+    return <QuestionEditor {...props} questionTitle="Consent statement" />
 };
 
 const ParagraphQuestionEditor: Editor<ParagraphQuestion> = (props) => {
@@ -844,6 +854,14 @@ const YesNoQuestionViewer: Viewer<YesNoQuestion> = ({content}) => {
     </>;
 };
 
+const ConsentQuestionViewer: Viewer<ConsentQuestion> = ({content}) => {
+    return <>
+        <Typography variant="body1">Please tick to show you agree to the following:</Typography>
+        <FormControlLabel label={content.title} control={<Checkbox />} />
+        <Description content={content} />
+    </>;
+};
+
 const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
     return <>
         <TextField label={content.title} placeholder={content.placeholder} fullWidth multiline rows={4} rowsMax={10} />
@@ -983,6 +1001,7 @@ const Editors: {[name in Content["type"]]: Editor<any>} = {
     "TextBlock": TextBlockEditor,
     "TextQuestion": TextQuestionEditor,
     "YesNoQuestion": YesNoQuestionEditor,
+    "ConsentQuestion": ConsentQuestionEditor,
     "ParagraphQuestion": ParagraphQuestionEditor,
     "ChoiceQuestion": ChoiceQuestionEditor,
     "CheckboxQuestion": CheckboxQuestionEditor,
@@ -995,6 +1014,7 @@ const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "TextBlock": TextBlockViewer,
     "TextQuestion": TextQuestionViewer,
     "YesNoQuestion": YesNoQuestionViewer,
+    "ConsentQuestion": ConsentQuestionViewer,
     "ParagraphQuestion": ParagraphQuestionViewer,
     "ChoiceQuestion": ChoiceQuestionViewer,
     "CheckboxQuestion": CheckboxQuestionViewer,
@@ -1092,6 +1112,8 @@ function getSidebarItems() {
         pick("CheckboxQuestion"),
         pick("ChoiceGridQuestion"),
         pick("CheckboxGridQuestion"),
+        null,
+        pick("ConsentQuestion"),
     ];
 }
 
