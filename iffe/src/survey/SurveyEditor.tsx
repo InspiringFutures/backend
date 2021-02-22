@@ -69,6 +69,7 @@ import {
 import { ulid } from "ulid";
 
 import {
+    CheckboxGridQuestion,
     CheckboxQuestion,
     ChoiceGridQuestion,
     ChoiceQuestion,
@@ -277,7 +278,8 @@ const QuestionTypeInfo = {
     "ParagraphQuestion": {icon: <ViewHeadlineIcon />, name: "Paragraph"},
     "ChoiceQuestion": {icon: <RadioButtonCheckedIcon />, name: "Choice"},
     "CheckboxQuestion": {icon: <CheckBoxIcon />, name: "Checkboxes"},
-    "ChoiceGridQuestion": {icon: <GridOnIcon />, name: "Choice grid"},
+    "ChoiceGridQuestion": {icon: <DragIndicatorIcon />, name: "Choice grid"},
+    "CheckboxGridQuestion": {icon: <GridOnIcon />, name: "Checkbox grid"},
 };
 
 function Spacer({width}: {width?: number}) {
@@ -530,6 +532,7 @@ const QuestionEditor = function({content, modify, children}: PropsWithChildren<E
                             allowOther = content.allowOther;
                             break;
                         case "ChoiceGridQuestion":
+                        case "CheckboxGridQuestion":
                             choices = content.columns;
                             rows = content.rows;
                             break;
@@ -548,6 +551,7 @@ const QuestionEditor = function({content, modify, children}: PropsWithChildren<E
                             newContent.allowOther = allowOther;
                             break;
                         case "ChoiceGridQuestion":
+                        case "CheckboxGridQuestion":
                             newContent.columns = choices;
                             newContent.rows = rows;
                             break;
@@ -724,6 +728,23 @@ const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
     </QuestionEditor>;
 };
 
+const CheckboxGridQuestionEditor: Editor<CheckboxGridQuestion> = (props) => {
+    const classes = useStyles();
+
+    const {content, modify} = props;
+
+    return <QuestionEditor {...props}>
+        <div className={classes.choiceGridColumns}>
+            <div className={classes.choiceGridColumn}>
+                <EditableTextArray heading="Rows" placeholder="Add row" entries={content.rows || []} onSave={(rows) => modify({...content, rows})} />
+            </div>
+            <div className={classes.choiceGridColumn}>
+                <EditableTextArray heading="Columns" placeholder="Add column" entries={content.columns || []} onSave={(columns) => modify({...content, columns})} />
+            </div>
+        </div>
+    </QuestionEditor>;
+};
+
 type ViewerProps<C extends Content> = {
     content: C;
 };
@@ -867,6 +888,32 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
     </>;
 };
 
+const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content}) => {
+    const rows = content.rows || [];
+    const columns = content.columns || [];
+
+    return <>
+        <FormLabel>{content.title}</FormLabel>
+        <Description content={content} />
+        {rows.length > 0 && columns.length > 0 ?
+            <table>
+                <thead>
+                <tr>
+                    <td>&nbsp;</td>
+                    {columns.map((column, index) => <th key={index}>{column}</th>)}
+                </tr>
+                </thead>
+                <tbody>
+                {rows.map((row, index) => <tr key={index}>
+                    <th>{row}</th>
+                    {columns.map((column, colIndex) => <td key={colIndex}><Checkbox /></td>)}
+                </tr>)}
+                </tbody>
+            </table>
+            :   <em>No rows/columns defined</em>}
+    </>;
+};
+
 const Editors: {[name in Content["type"]]: Editor<any>} = {
     "SectionHeader": SectionHeaderEditor,
     "TextBlock": TextBlockEditor,
@@ -876,6 +923,7 @@ const Editors: {[name in Content["type"]]: Editor<any>} = {
     "ChoiceQuestion": ChoiceQuestionEditor,
     "CheckboxQuestion": CheckboxQuestionEditor,
     "ChoiceGridQuestion": ChoiceGridQuestionEditor,
+    "CheckboxGridQuestion": CheckboxGridQuestionEditor,
 };
 
 const Viewers: {[name in Content["type"]]: Viewer<any>} = {
@@ -887,6 +935,7 @@ const Viewers: {[name in Content["type"]]: Viewer<any>} = {
     "ChoiceQuestion": ChoiceQuestionViewer,
     "CheckboxQuestion": CheckboxQuestionViewer,
     "ChoiceGridQuestion": ChoiceGridQuestionViewer,
+    "CheckboxGridQuestion": CheckboxGridQuestionViewer,
 };
 
 const EditorFooter: Editor<Content> = ({content, modify}) => {
@@ -978,6 +1027,7 @@ function getSidebarItems() {
         pick("ChoiceQuestion"),
         pick("CheckboxQuestion"),
         pick("ChoiceGridQuestion"),
+        pick("CheckboxGridQuestion"),
     ];
 }
 

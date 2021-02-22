@@ -44,14 +44,19 @@ export interface CheckboxQuestion extends Question {
     allowOther?: boolean;
 }
 
+export interface CheckboxGridQuestion extends Question {
+    readonly type: "CheckboxGridQuestion";
+    rows?: string[];
+    columns?: string[];
+}
+
 export interface ChoiceGridQuestion extends Question {
     readonly type: "ChoiceGridQuestion";
     rows?: string[];
     columns?: string[];
 }
 
-
-export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion | CheckboxQuestion;
+export type SurveyQuestion = TextQuestion | YesNoQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion | CheckboxQuestion | CheckboxGridQuestion;
 export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
 
 export function isQuestion(c: Content): c is Question {
