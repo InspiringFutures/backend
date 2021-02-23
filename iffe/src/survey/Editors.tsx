@@ -178,16 +178,16 @@ const CheckboxGridQuestionEditor: Editor<CheckboxGridQuestion> = (props) => {
 };
 
 const Editors: { [name in Content["type"]]: Editor<any> } = {
-    "SectionHeader": SectionHeaderEditor,
-    "TextBlock": TextBlockEditor,
-    "TextQuestion": TextQuestionEditor,
-    "YesNoQuestion": YesNoQuestionEditor,
-    "ConsentQuestion": ConsentQuestionEditor,
-    "ParagraphQuestion": ParagraphQuestionEditor,
-    "ChoiceQuestion": ChoiceQuestionEditor,
-    "CheckboxQuestion": CheckboxQuestionEditor,
-    "ChoiceGridQuestion": ChoiceGridQuestionEditor,
-    "CheckboxGridQuestion": CheckboxGridQuestionEditor,
+    "SectionHeader": SectionHeaderEditor, // Uses EditorContext so can't memoise
+    "TextBlock": React.memo(TextBlockEditor),
+    "TextQuestion": React.memo(TextQuestionEditor),
+    "YesNoQuestion": React.memo(YesNoQuestionEditor),
+    "ConsentQuestion": React.memo(ConsentQuestionEditor),
+    "ParagraphQuestion": React.memo(ParagraphQuestionEditor),
+    "ChoiceQuestion": React.memo(ChoiceQuestionEditor),
+    "CheckboxQuestion": React.memo(CheckboxQuestionEditor),
+    "ChoiceGridQuestion": React.memo(ChoiceGridQuestionEditor),
+    "CheckboxGridQuestion": React.memo(CheckboxGridQuestionEditor),
 };
 
 const EditorFooter: Editor<Content> = ({content, modify}) => {

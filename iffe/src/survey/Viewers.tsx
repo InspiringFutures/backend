@@ -222,16 +222,16 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content}) => 
 };
 
 export const Viewers: { [name in Content["type"]]: Viewer<any> } = {
-    "SectionHeader": SectionHeaderViewer,
-    "TextBlock": TextBlockViewer,
-    "TextQuestion": TextQuestionViewer,
-    "YesNoQuestion": YesNoQuestionViewer,
-    "ConsentQuestion": ConsentQuestionViewer,
-    "ParagraphQuestion": ParagraphQuestionViewer,
-    "ChoiceQuestion": ChoiceQuestionViewer,
-    "CheckboxQuestion": CheckboxQuestionViewer,
-    "ChoiceGridQuestion": ChoiceGridQuestionViewer,
-    "CheckboxGridQuestion": CheckboxGridQuestionViewer,
+    "SectionHeader": React.memo(SectionHeaderViewer),
+    "TextBlock": React.memo(TextBlockViewer),
+    "TextQuestion": React.memo(TextQuestionViewer),
+    "YesNoQuestion": React.memo(YesNoQuestionViewer),
+    "ConsentQuestion": React.memo(ConsentQuestionViewer),
+    "ParagraphQuestion": React.memo(ParagraphQuestionViewer),
+    "ChoiceQuestion": React.memo(ChoiceQuestionViewer),
+    "CheckboxQuestion": React.memo(CheckboxQuestionViewer),
+    "ChoiceGridQuestion": React.memo(ChoiceGridQuestionViewer),
+    "CheckboxGridQuestion": React.memo(CheckboxGridQuestionViewer),
 };
 
 export const ContentViewer = ({content}: ViewerProps<Content>) => {
