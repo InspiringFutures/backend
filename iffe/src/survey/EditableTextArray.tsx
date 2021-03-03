@@ -22,6 +22,7 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
         if (drop.reason === 'CANCEL') {
             return;
         }
+        if (drop.source.index === drop.destination!.index) return;
         const newEntries = [...entries];
         const removed = newEntries.splice(drop.source.index, 1);
         newEntries.splice(drop.destination?.index!, 0, ...removed);
@@ -30,16 +31,22 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
     }
 
     function save(index: number, text: string | undefined, options?: SaveOptions) {
-        const newEntries = [...entries];
-        if (text === undefined) {
-            newEntries.splice(index, 1);
-        } else {
-            newEntries.splice(index, 1, text);
+        console.log("save", index, text, options);
+        if (entries[index] !== text) {
+            const newEntries = [...entries];
+            if (text === undefined) {
+                newEntries.splice(index, 1);
+            } else {
+                newEntries.splice(index, 1, text);
+            }
+            onSave(newEntries);
         }
-        onSave(newEntries);
         let newIndex = undefined;
         if (options && options.movement !== undefined) {
             newIndex = index + options.movement;
+            if (text === undefined && newIndex > index) {
+                newIndex--; // If we deleted something, we need to account for it in the new index.
+            }
         }
         setSelectedIndex(newIndex);
     }
@@ -68,7 +75,7 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
             <Droppable droppableId="editableTextArray">
                 {(provided) => (<div ref={provided.innerRef} {...provided.droppableProps}>
                     {entries.map((entry, index) => {
-                        return <Draggable key={index} draggableId={"D" + index} index={index}>
+                        return <Draggable key={index + ":" + entry} draggableId={"D" + index} index={index}>
                             {(provided) =>
                                 <div className={classes.editableTextArrayDraggable}
                                      ref={provided.innerRef} {...provided.draggableProps}>
@@ -76,6 +83,7 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
                                         className={classes.editableTextArrayDragHandle} {...provided.dragHandleProps}><DragIndicatorIcon/></span>
                                     <EditableText autoFocus={selectedIndex === index}
                                                   isValid={isValid(index)} text={entry}
+                                                  noSupressSaves
                                                   onSave={(text, options) => save(index, text, options)}
                                                   onDelete={(options) => save(index, undefined, options)}/>
                                 </div>
@@ -89,12 +97,18 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
         <div className={classes.editableTextArrayAddRow}>
             <EditableText key={entries.length} autoFocus={selectedIndex === entries.length}
                           isValid={isValid(-1)} holderClassName={classes.editableTextArrayAddText}
-                          placeHolder={placeholder} onSave={(text) => {
+                          noSupressSaves
+                          placeHolder={placeholder} onSave={(text, options) => {
+                let newIndex;
                 if (text) {
                     const newEntries = [...entries, text];
                     onSave(newEntries);
-                    setSelectedIndex(newEntries.length);
+                    newIndex = newEntries.length;
                 }
+                if (options && options.movement !== undefined) {
+                    newIndex = entries.length + options.movement;
+                }
+                setSelectedIndex(newIndex);
             }}
             />
         </div>

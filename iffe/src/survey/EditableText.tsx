@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Checkbox, IconButton, TextareaAutosize, TextField } from "@material-ui/core";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
 import CancelIcon from "@material-ui/icons/Cancel";
@@ -24,6 +24,7 @@ type EditableTextProps = {
     isValid?: (newText: string | undefined) => string | undefined;
     withCheckbox?: boolean;
     label?: string;
+    noSupressSaves?: boolean;
 };
 export const escapedNewLineToLineBreakTag = (string: string) => string.split('\n').map((item: string, index: number) => (index === 0) ? item : [<br key={index}/>, item])
 
@@ -35,62 +36,83 @@ type EditableTextAction =
     | { type: "cancel" }
     | { type: "update"; value: string }
     ;
+
+const useWrappedRef = <T extends any>(value: T) => {
+    const ref = useRef(value);
+    useEffect(() => {
+        ref.current = value;
+    }, [value]);
+    return ref;
+};
+
 export const EditableText = ({
                                  text,
-                                 onSave,
+                                 onSave: onSaveUnsafe,
                                  multiLine,
                                  placeHolder,
-                                 onDelete,
+                                 onDelete: onDeleteUnsafe,
                                  holderClassName,
                                  autoFocus,
-                                 isValid,
+                                 isValid: isValidUnsafe,
                                  withCheckbox,
-                                 label
+                                 label,
+                                 noSupressSaves,
                              }: EditableTextProps) => {
     const classes = useStyles();
     const wrapperRef = useRef<HTMLDivElement>(null);
     const [errorMessage, setErrorMessage] = useState<string>();
-    const [state, dispatch] = useReducer(useCallback((current: EditableTextState, action: EditableTextAction) => {
-        switch (action.type) {
-            case 'startEdit':
-                if (current.isEditing) {
-                    return current;
-                }
-                return {isEditing: true, value: text ?? ""};
-            case 'save':
-                if (current.isEditing) {
-                    if (current.value === undefined || current.value === "") {
-                        if (onDelete) {
-                            onDelete(action.options);
-                        } else {
-                            if (isValid && !!isValid(current.value)) {
-                                alert("Not a valid value")
-                                return current;
-                            } else if (placeHolder || withCheckbox) {
-                                onSave(undefined, action.options);
+
+    const onSave = useWrappedRef(onSaveUnsafe);
+    const onDelete = useWrappedRef(onDeleteUnsafe);
+    const isValid = useWrappedRef(isValidUnsafe);
+
+    const reducer = useMemo(() => {
+        return (current: EditableTextState, action: EditableTextAction) => {
+            switch (action.type) {
+                case 'startEdit':
+                    if (current.isEditing) {
+                        return current;
+                    }
+                    return {isEditing: true, value: text ?? ""};
+                case 'save':
+                    if (current.isEditing) {
+                        if (current.value === undefined || current.value === "") {
+                            if (onDelete.current) {
+                                onDelete.current(action.options);
                             } else {
-                                if (text !== undefined) {
-                                    // Not empty to start with
-                                    alert("Cannot be empty.");
+                                if (isValid.current && !!isValid.current(current.value)) {
+                                    alert("Not a valid value")
+                                    return current;
+                                } else if (placeHolder || withCheckbox) {
+                                    onSave.current(undefined, action.options);
+                                } else {
+                                    if (text !== undefined) {
+                                        // Not empty to start with
+                                        alert("Cannot be empty.");
+                                    }
+                                    return current;
                                 }
+                            }
+                        } else {
+                            if (isValid.current && !!isValid.current(current.value)) {
+                                alert("Not a valid value");
                                 return current;
                             }
+                            if (noSupressSaves || current.value !== text) {
+                                // No changes, no save
+                                onSave.current(current.value, action.options);
+                            }
                         }
-                    } else {
-                        if (isValid && !!isValid(current.value)) {
-                            alert("Not a valid value");
-                            return current;
-                        }
-                        onSave(current.value, action.options);
                     }
-                }
-                return {isEditing: false};
-            case 'cancel':
-                return {isEditing: false};
-            case 'update':
-                return {...current, value: action.value};
-        }
-    }, [text, onDelete, isValid, placeHolder, withCheckbox, onSave]), {isEditing: !!autoFocus});
+                    return {isEditing: false};
+                case 'cancel':
+                    return {isEditing: false};
+                case 'update':
+                    return {...current, value: action.value};
+            }
+        };
+    }, [text, onDelete, isValid, placeHolder, withCheckbox, onSave, noSupressSaves]);
+    const [state, dispatch] = useReducer(reducer, {isEditing: false});
 
     useEffect(() => {
         if (autoFocus === true) {
@@ -103,8 +125,8 @@ export const EditableText = ({
     const cancel = useCallback(() => dispatch({type: 'cancel'}), []);
     const setCurrent = useCallback((value: string) => {
         dispatch({type: 'update', value});
-        if (isValid) {
-            setErrorMessage(isValid(value));
+        if (isValid.current) {
+            setErrorMessage(isValid.current(value));
         }
     }, [isValid]);
 
@@ -136,7 +158,7 @@ export const EditableText = ({
                           }
                       } else {
                           cancel();
-                          onSave(undefined);
+                          onSave.current(undefined);
                       }
                   }}/>
     </> : null;
@@ -177,8 +199,8 @@ export const EditableText = ({
                 {checkboxContent} {labelElement}
                 {text === undefined ?
                     <i className={classes.placeholder}>{placeHolder}</i> : text}<Spacer/>
-                {onDelete &&
-                <IconButton className={classes.editableInlineButton} onClick={() => onDelete()}
+                {onDelete.current &&
+                <IconButton className={classes.editableInlineButton} onClick={() => onDelete.current && onDelete.current()}
                             size="small"><DeleteIcon/></IconButton>}
             </span>;
 };

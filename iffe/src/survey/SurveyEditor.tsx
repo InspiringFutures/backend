@@ -134,7 +134,7 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                                                        dragHandleProps={provided.dragHandleProps}
                                                        modify={(newC) => {
                                                            const newContent = [...content];
-                                                           let on;
+                                                           let on: string | undefined;
                                                            if (newC === "duplicate") {
                                                                const dupCount = getCountUnder(content, index);
                                                                const toAdd = [];
