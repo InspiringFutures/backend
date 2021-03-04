@@ -1,4 +1,4 @@
-import { useMemo, useReducer } from "react";
+import { useMemo, useReducer, useRef } from "react";
 
 type UndoAction<T> =
     | { type: 'set'; value: T }
@@ -47,6 +47,8 @@ interface UndoActions<T> {
     undo: () => void;
     redo: () => void;
     clearDirty: () => void;
+    getState: () => T;
+    getDirty: () => boolean;
 }
 
 interface UndoStack<T> {
@@ -65,12 +67,16 @@ export const useUndoStack = function <T extends any>(initialState: T): UndoStack
         clean: initialState,
     };
     const [state, dispatch] = useReducer<UndoReducer<T>>(undoReducer, initializerArg);
+    const stateRef = useRef(state);
+    stateRef.current = state;
     const actions = useMemo(() => {
         return {
             set: (value: T) => dispatch({type: 'set', value}),
             undo: () => dispatch({type: 'undo'}),
             redo: () => dispatch({type: 'redo'}),
             clearDirty: () => dispatch({type: 'clearDirty'}),
+            getState: () => stateRef.current.present,
+            getDirty: () => stateRef.current.clean !== stateRef.current.present,
         };
     }, []);
     return {

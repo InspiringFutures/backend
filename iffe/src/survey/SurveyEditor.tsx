@@ -1,4 +1,4 @@
-import React, { useReducer, useRef } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
@@ -8,7 +8,8 @@ import Typography from '@material-ui/core/Typography';
 import SaveIcon from '@material-ui/icons/Save';
 import UndoIcon from '@material-ui/icons/Undo';
 import RedoIcon from '@material-ui/icons/Redo';
-import { Button, createMuiTheme, ThemeProvider } from "@material-ui/core";
+import ArrowBackIcon from '@material-ui/icons/ArrowBack';
+import { Button, CircularProgress, createMuiTheme, ThemeProvider } from "@material-ui/core";
 import { ulid } from "ulid";
 import { useSnackbar } from 'notistack';
 
@@ -46,7 +47,21 @@ export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
     const previewDialog = useRef<MakeDialog>(null);
     const importDialog = useRef<MakeDialog>(null);
-    const { enqueueSnackbar } = useSnackbar();
+    const {enqueueSnackbar} = useSnackbar();
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        function unload(e: BeforeUnloadEvent) {
+            if (actions.getDirty()) {
+                e.preventDefault();
+                return e.returnValue = "There are unsaved changes";
+            }
+        }
+        window.addEventListener("beforeunload", unload);
+        return () => {
+            window.removeEventListener("beforeunload", unload);
+        };
+    }, [actions]);
 
     function onDragEnd(drop: DropResult) {
         if (drop.reason === 'CANCEL') {
@@ -85,6 +100,19 @@ export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
         }
     }
 
+    const save = async () => {
+        try {
+            setSaving(true);
+            const {success, message} = await saveContent(content);
+            if (success) {
+                actions.clearDirty();
+            }
+            enqueueSnackbar(message, {variant: success ? 'success' : 'error'});
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (<ThemeProvider theme={theme}>
         <DragDropContext onDragEnd={onDragEnd}>
             <div className={classes.root}>
@@ -94,6 +122,10 @@ export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
                     isOpen={isOpen} open={open} close={close}  addContent={addContent} surveyId={surveyInfo.id}/>}</MakeDialog>
                 <AppBar position="fixed" className={classes.appBar}>
                     <Toolbar>
+                        <Button onClick={() => window.history.length > 0 ? window.history.back() : window.close()}>
+                            <ArrowBackIcon className={classes.backArrow} />
+                        </Button>
+                        <Spacer width={16}/>
                         <Typography variant="h6" noWrap>
                             {surveyInfo.name}
                         </Typography>
@@ -118,15 +150,8 @@ export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
                             Redo
                         </Button>
                         <Spacer width={16}/>
-                        <Button variant="contained" startIcon={<SaveIcon/>} disabled={!dirty} onClick={() => {
-                            saveContent(content).then(({success, message}) => {
-                                if (success) {
-                                    actions.clearDirty();
-                                }
-                                enqueueSnackbar(message, {variant: success ? 'success' : 'error'});
-                            });
-                        }}>
-                            Save
+                        <Button variant="contained" startIcon={saving ? <CircularProgress /> : <SaveIcon/>} disabled={!dirty || saving} onClick={() => save()}>
+                            {saving ? "Saving": "Save"}
                         </Button>
                     </Toolbar>
                 </AppBar>
@@ -243,6 +268,9 @@ const useStyles = makeStyles((theme: Theme) =>
             right: drawerWidth,
             padding: theme.spacing(2),
             overflowY: 'scroll',
+        },
+        backArrow: {
+            color: theme.palette.primary.contrastText,
         },
     }),
 );
