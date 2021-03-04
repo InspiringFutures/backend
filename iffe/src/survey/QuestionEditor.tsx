@@ -7,9 +7,12 @@ import { QuestionTypeMenu } from "./QuestionTypeMenu";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
 import { sharedStyles } from "./styles";
 
+export interface ModifyOptions {
+    sectionOnly?: boolean;
+}
 export type EditorProps<C extends Content> = {
     content: C;
-    modify: (newContent: SurveyContent | undefined | "duplicate") => void;
+    modify: (newContent: SurveyContent | undefined | "duplicate", modifyOptions?: ModifyOptions) => void;
 };
 export type Editor<C extends Content> = FunctionComponent<EditorProps<C>>;
 

@@ -25,6 +25,7 @@ import { Viewers } from "./Viewers";
 import DragHandle from "@material-ui/icons/DragHandle";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
 import { sharedStyles } from "./styles";
+import { usePopupMenu } from "./PopupMenu";
 
 const SectionHeaderEditor: Editor<SectionHeader> = ({content, modify}) => {
     const classes = useStyles();
@@ -194,13 +195,35 @@ const EditorFooter: Editor<Content> = ({content, modify}) => {
     const classes = useStyles();
     const {hasSingleSection} = useContext(EditorContext);
 
+    const duplicateMenu = usePopupMenu({
+        "Duplicate section and contents": () => modify("duplicate"),
+        "Duplicate just the section header": () => modify("duplicate", {sectionOnly: true}),
+    });
+
+    const deleteMenu = usePopupMenu({
+        "Delete section and contents": () => modify(undefined),
+        "Delete just the section header": () => modify(undefined, {sectionOnly: true}),
+    });
+
     return <div className={classes.editorFooterWrapper}>
         <Spacer/>
-        <Tooltip title="Duplicate"><IconButton className={classes.editableInlineButton}
-                                               onClick={() => modify("duplicate")}><FilterNoneIcon/></IconButton></Tooltip>
-        {(content.type !== 'SectionHeader' || !hasSingleSection) &&
-        <Tooltip title="Delete"><IconButton className={classes.editableInlineButton}
-                                            onClick={() => modify(undefined)}><DeleteIcon/></IconButton></Tooltip>}
+        {duplicateMenu.provided}
+        <Tooltip title="Duplicate">
+            <IconButton className={classes.editableInlineButton}
+                        onClick={content.type === 'SectionHeader' ? duplicateMenu.open : () => modify("duplicate")}>
+                <FilterNoneIcon/>
+            </IconButton>
+        </Tooltip>
+        <Tooltip title="Delete">
+            {content.type === 'SectionHeader' ?
+                hasSingleSection ? <></> : <>
+                    {deleteMenu.provided}
+                    <IconButton className={classes.editableInlineButton} onClick={deleteMenu.open}><DeleteIcon/></IconButton>
+                </>
+                :
+                    <IconButton className={classes.editableInlineButton} onClick={() => modify(undefined)}><DeleteIcon/></IconButton>
+            }
+        </Tooltip>
     </div>;
 };
 

@@ -1,7 +1,7 @@
 import { Content } from "./SurveyContent";
 import { useCallback, useRef, useState } from "react";
 
-export function getCountUnder(content: Content[], index: number) {
+export function getCountIncluding(content: Content[], index: number) {
     const item = content[index];
     if (item.type === 'SectionHeader') {
         // Count questions under this

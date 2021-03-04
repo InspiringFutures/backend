@@ -20,7 +20,7 @@ import { PreviewDialog } from "./PreviewDialog";
 import { MakeDialog } from "./MakeDialog";
 import { useUndoStack } from "./useUndoStack";
 import { Sidebar } from "./Sidebar";
-import { getCountUnder, useTriggeredTimer } from "./utils";
+import { getCountIncluding, useTriggeredTimer } from "./utils";
 import { EditorAction, EditorContext, EditorState } from "./EditorContext";
 import { ContentEditor } from "./Editors";
 import { autoSaveSurvey, saveSurvey, SurveyInfo } from "./api";
@@ -104,7 +104,7 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
             newContent.splice(drop.destination?.index!, 0, newItem);
             editorDispatch({type: 'focus', on: newItem.id});
         } else {
-            const removed = newContent.splice(drop.source.index, getCountUnder(content, drop.source.index));
+            const removed = newContent.splice(drop.source.index, getCountIncluding(content, drop.source.index));
             id = removed[0].id;
             newContent.splice(drop.destination?.index!, 0, ...removed);
         }
@@ -198,11 +198,12 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
                                         <ContentEditor content={c} ref={provided.innerRef}
                                                        draggableProps={provided.draggableProps}
                                                        dragHandleProps={provided.dragHandleProps}
-                                                       modify={(newC) => {
+                                                       modify={(newC, options) => {
                                                            const newContent = [...content];
                                                            let on: string | undefined;
                                                            if (newC === "duplicate") {
-                                                               const dupCount = getCountUnder(content, index);
+                                                               const sectionCount = getCountIncluding(content, index);
+                                                               const dupCount = options && options.sectionOnly ? 1 : sectionCount;
                                                                const toAdd = [];
                                                                for (let i = index; i < index + dupCount; i++) {
                                                                    const newC = JSON.parse(JSON.stringify(content[i]));
@@ -212,9 +213,11 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
                                                                    }
                                                                    toAdd.push(newC);
                                                                }
-                                                               newContent.splice(index + dupCount, 0, ...toAdd);
+                                                               newContent.splice(index + sectionCount, 0, ...toAdd);
                                                            } else if (newC === undefined) {
-                                                               newContent.splice(index, 1);
+                                                               const sectionCount = getCountIncluding(content, index);
+                                                               const deleteCount = options && options.sectionOnly ? 1 : sectionCount;
+                                                               newContent.splice(index, deleteCount);
                                                                if (newContent[index]) {
                                                                    on = newContent[index].id;
                                                                }
