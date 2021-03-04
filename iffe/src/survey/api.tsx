@@ -4,7 +4,7 @@ export function extractErrorMessage(e: Error | any) {
     return 'message' in e ? e.message : e.toString();
 }
 
-export const endpoint = `http://localhost:8115`;
+export const endpoint = ``;
 
 export interface SurveySummary {
     id: number;
