@@ -13,7 +13,7 @@
             "ref"  : "origin/main",
             "repo" : "git@github.com:InspiringFutures/docker-stack-example.git",
             "path" : "/home/ubuntu/app",
-            "post-deploy" : "cd ifbe && npm install && npm run build && pm2 startOrRestart ecosystem.json --env qa"
+            "post-deploy" : "cd iffe && npm install && npm run build && cd ../ifbe && npm install && npm run build && pm2 startOrRestart ecosystem.json --env qa"
         }
     }
 }
