@@ -1,29 +1,21 @@
 import {
     Body,
-    ForbiddenException,
     Get,
     Injectable,
     Param,
     Post,
     Render,
-    Req, Res,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { ValidationError } from 'sequelize';
 
 import { Controller, Page } from '../util/autopage';
-import { Admin, AdminLevel } from '../model/admin.model';
-import { NeedsAdmin, NeedsSuperAdmin } from '../util/guard';
+import { Admin } from '../model/admin.model';
+import { NeedsAdmin } from '../util/guard';
 import { redirect } from '../util/redirect';
 import { UserService } from '../service/user.service';
-import { GroupService } from '../service/group.service';
 import { getAll } from '../util/functional';
-import { ClientStatus } from '../model/client.model';
-import { ClientService } from '../service/client.service';
-import { JournalService } from '../service/journal.service';
-import { AccessLevel, AccessLevels, checkAccessLevel } from "../model/accessLevels";
+import { AccessLevel, checkAccessLevel } from "../model/accessLevels";
 import { SurveyService } from "../service/survey.service";
-import { Model } from "sequelize-typescript";
 import { Survey } from "../model/survey.model";
 
 @Controller('survey')
@@ -46,6 +38,17 @@ export class SurveyController {
         return redirect('/survey/' + survey.id + '/edit');
     }
 
+    @Get('list')
+    @NeedsAdmin
+    async list() {
+        const user = this.userService.currentUser()!;
+        const surveys = await this.surveyService.surveysForUser(user);
+        return surveys.map(survey => ({
+            id: survey.id,
+            name: survey.name,
+        }));
+    }
+
     @Page('view')
     @Get(':id')
     @NeedsAdmin
@@ -60,7 +63,22 @@ export class SurveyController {
     @NeedsAdmin
     async getContent(@Param('id') surveyId) {
         const survey = await this.hasSurveyAccess(surveyId, AccessLevel.view);
-        return JSON.parse(survey.content);
+        return {
+            id: survey.id,
+            name: survey.name,
+            updatedAt: survey.updatedAt,
+            updatedBy: survey.updater.name,
+            content: survey.content.content,
+        };
+    }
+
+    @Post(':id/content')
+    @NeedsAdmin
+    async setContent(@Param('id') surveyId, @Body() content) {
+        const survey = await this.hasSurveyAccess(surveyId, AccessLevel.edit);
+        survey.content = content;
+        await survey.save();
+        return {success: true, message: "Saved successfully"};
     }
 
     @Post(':id/admins')

@@ -11,7 +11,7 @@ import ListItemText from "@material-ui/core/ListItemText";
 import { ulid } from "ulid";
 import Divider from "@material-ui/core/Divider";
 
-const ContentTypeInfo = {
+export const ContentTypeInfo = {
     "SectionHeader": {icon: <FormatLineSpacingIcon/>, name: "Section"},
     "TextBlock": {icon: <TextFieldsIcon/>, name: "Explanatory Text"},
     ...QuestionTypeInfo

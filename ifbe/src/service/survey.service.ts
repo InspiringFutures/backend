@@ -19,6 +19,7 @@ export class SurveyService {
     async surveysForUser(admin: User) {
         const surveys = await this.surveyModel.findAll({
             include: [{model: Admin, as: 'admins', where: {id: admin.id}, required: admin.level !== AdminLevel.super }],
+            attributes: {exclude: ['content']},
          });
         return surveys.map((s: SurveyWithAccessLevel) => {
             const {admins} = s;

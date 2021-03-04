@@ -39,6 +39,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  if (process.env.BASE_URL === "http://localhost:8115") {
+    app.enableCors();
+  }
   await app.listen(8115);
 }
 bootstrap();

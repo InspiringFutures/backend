@@ -1,4 +1,5 @@
 import { BelongsTo, BelongsToMany, Column, HasMany, Model, Table } from 'sequelize-typescript';
+import { DataTypes } from 'sequelize';
 
 import { Admin } from "./admin.model";
 import { SurveyPermission } from "./surveyPermission.model";
@@ -10,8 +11,8 @@ export class Survey extends Model<Survey> {
     @Column
     name: string;
 
-    @Column
-    content: string;
+    @Column(DataTypes.JSON)
+    content: { content: any };
 
     @Column
     updaterId: number;

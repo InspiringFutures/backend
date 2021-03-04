@@ -1,14 +1,16 @@
 import React from 'react';
 import './App.css';
 import { Router } from '@reach/router';
-import SurveyEditor from './survey/SurveyEditor';
+import { SnackbarProvider } from "notistack";
+
+import { SurveyEditorLoader } from "./survey/SurveyEditorLoader";
 
 function App() {
-  return (
+  return (<SnackbarProvider maxSnack={3}>
       <Router>
-          <SurveyEditor path="/survey/:surveyId/edit" />
+          <SurveyEditorLoader path="/survey/:surveyId/edit" />
       </Router>
-  );
+  </SnackbarProvider>);
 }
 
 export default App;

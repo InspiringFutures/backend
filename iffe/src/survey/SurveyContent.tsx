@@ -1,6 +1,7 @@
 export interface Content {
     readonly type: SurveyContent["type"];
     id: string;
+    originId?: string;
     title?: string;
     description?: string;
 }

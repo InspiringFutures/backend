@@ -1,4 +1,4 @@
-import React, { useReducer, useRef, useState } from 'react';
+import React, { useReducer, useRef } from 'react';
 import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
@@ -8,10 +8,9 @@ import Typography from '@material-ui/core/Typography';
 import SaveIcon from '@material-ui/icons/Save';
 import UndoIcon from '@material-ui/icons/Undo';
 import RedoIcon from '@material-ui/icons/Redo';
-
-import { RouteComponentProps } from "@reach/router";
 import { Button, createMuiTheme, ThemeProvider } from "@material-ui/core";
 import { ulid } from "ulid";
+import { useSnackbar } from 'notistack';
 
 import { Content, SurveyContent, } from "./SurveyContent";
 import { Spacer } from "./Spacer";
@@ -21,20 +20,15 @@ import { MakeDialog } from "./MakeDialog";
 import { useUndoStack } from "./useUndoStack";
 import { Sidebar } from "./Sidebar";
 import { getCountUnder } from "./utils";
-import {
-    EditorAction,
-    EditorContext,
-    EditorState
-} from "./EditorContext";
+import { EditorAction, EditorContext, EditorState } from "./EditorContext";
 import { ContentEditor } from "./Editors";
+import { SurveyInfo } from "./api";
+import { ImportDialog } from './ImportDialog';
 
-interface SurveyEditorProps extends RouteComponentProps
+interface SurveyEditorProps
 {
-    surveyId?: string;
-}
-
-interface SurveyInfo {
-    name: string;
+    surveyInfo: SurveyInfo;
+    saveContent: (content: SurveyContent[]) => Promise<{message: string; success: boolean}>;
 }
 
 function editorReducer(state: EditorState, action: EditorAction) {
@@ -45,23 +39,14 @@ function editorReducer(state: EditorState, action: EditorAction) {
     return state;
 }
 
-export default function SurveyEditor({surveyId}: SurveyEditorProps) {
+export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
     const classes = useStyles();
 
-    // Load the survey!
-    const [surveyInfo, setSurveyInfo] = useState<SurveyInfo>({name: "Survey " + surveyId});
-    const {content, canUndo, canRedo, actions} = useUndoStack<SurveyContent[]>([
-        {"type":"SectionHeader","id":"01EYR3VD73T12BBNDCFXZJDF3F","title":"About the survey","description":"Different arts activities impact people in all sorts of ways depending on their circumstances, and often in unexpected ways. Some of these questions might seem like they don’t apply to your course, but they’ve all come from what other arts participants have said about their experiences. Please answer the questions as honestly as you can, and remember there is no right answer to any of the questions. Unless the question gives a specific time, you should answer for how you generally feel. You can add comments in the boxes or around the page if you would like to. \nThank you so much for taking part in this project. "},
-        {"type":"YesNoQuestion","id":"01EYR3VD73T12BBNDCFXZJDF3G","title":"Have you taken part in Arts courses before? (E.g. drama, music, painting, poetry etc.)"},
-        {"type":"ParagraphQuestion","id":"01EYR42PTTNAJTZM77FEZX950Y","title":"If yes, please tell us what else you have done"},
-        {"type":"ChoiceGridQuestion","id":"01EYR69KRPQNGSWN1E3VVM8R4J","rows":["Creative activity is an important part of my life","I am good at some creative activities","I have skills that would allow me to work in the arts world","I am more myself when doing a creative activity than the rest of the time"],"title":"Please tick to show how much you agree or disagree with the following statements. Answer for how you generally feel.","columns":["Strongly Agree","Agree","Neutral","Disagree","Strongly Disagree"]},
-        {type: "SectionHeader", id: "01EYV1MK19BXCPVS3YZ40MEQ6B", title: "About You"},
-        {type: "TextQuestion", id: "01EYV1R3QMJCSJ105S1BKDDYE4", title: "Describe yourself in three words", placeholder: "You can use anything that makes sense to you."},
-        {type: "TextBlock", id: "01EYV22JNZKMQ4FM4SYWA3Q4M6", title: "We’re asking for a bit of info about you so that we can see if some people are less able to access arts programmes in the criminal justice system than others. Please answer as accurately as you can."},
-        {type: "ChoiceQuestion", id: "01EYV1MMHQKR057CC41HKNE5C7", title: "Please enter your ethnicity", choices: ["White", "Black", "Asian", "Other"]},
-    ]);
+    const {content, canUndo, canRedo, actions, dirty} = useUndoStack<SurveyContent[]>(surveyInfo.content);
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
     const previewDialog = useRef<MakeDialog>(null);
+    const importDialog = useRef<MakeDialog>(null);
+    const { enqueueSnackbar } = useSnackbar();
 
     function onDragEnd(drop: DropResult) {
         if (drop.reason === 'CANCEL') {
@@ -86,17 +71,38 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
 
     const hasSingleSection = content.filter(c => c.type === 'SectionHeader').length === 1;
 
+    function addContent(addedContent: SurveyContent[]) {
+        let firstId: string | undefined;
+        const newContent = [...content, ...addedContent.map(content => {
+            // Re-id content
+            const id = ulid();
+            if (!firstId) firstId = id;
+            return {...content, originId: content.id, id};
+        })];
+        actions.set(newContent);
+        if (firstId) {
+            editorDispatch({type: "focus", on: firstId});
+        }
+    }
+
     return (<ThemeProvider theme={theme}>
         <DragDropContext onDragEnd={onDragEnd}>
             <div className={classes.root}>
                 <MakeDialog ref={previewDialog}>{({isOpen, open, close}) => <PreviewDialog
                     isOpen={isOpen} open={open} close={close} contents={content}/>}</MakeDialog>
+                <MakeDialog ref={importDialog}>{({isOpen, open, close}) => <ImportDialog
+                    isOpen={isOpen} open={open} close={close}  addContent={addContent} surveyId={surveyInfo.id}/>}</MakeDialog>
                 <AppBar position="fixed" className={classes.appBar}>
                     <Toolbar>
                         <Typography variant="h6" noWrap>
                             {surveyInfo.name}
                         </Typography>
                         <Spacer/>
+                        <Button variant="contained"
+                                onClick={() => importDialog.current && importDialog.current.open()}>
+                            Import
+                        </Button>
+                        <Spacer width={16}/>
                         <Button variant="contained"
                                 onClick={() => previewDialog.current && previewDialog.current.open()}>
                             Preview
@@ -112,7 +118,14 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                             Redo
                         </Button>
                         <Spacer width={16}/>
-                        <Button variant="contained" startIcon={<SaveIcon/>}>
+                        <Button variant="contained" startIcon={<SaveIcon/>} disabled={!dirty} onClick={() => {
+                            saveContent(content).then(({success, message}) => {
+                                if (success) {
+                                    actions.clearDirty();
+                                }
+                                enqueueSnackbar(message, {variant: success ? 'success' : 'error'});
+                            });
+                        }}>
                             Save
                         </Button>
                     </Toolbar>
@@ -176,7 +189,7 @@ export default function SurveyEditor({surveyId}: SurveyEditorProps) {
                 >
                     <Toolbar/>
                     <div className={classes.drawerContainer}>
-                        <Sidebar  addItem={(newItem) => {
+                        <Sidebar addItem={(newItem) => {
                             const newContent = [...content, newItem];
                             actions.set(newContent);
                             editorDispatch({type: "focus", on: newItem.id});
