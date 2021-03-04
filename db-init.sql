@@ -99,6 +99,7 @@ create table "SurveyPermissions" (id serial primary key,
 
 create table "SurveyVersions" (id serial primary key,
     "content" json not null,
+    "autoSave" boolean not null default TRUE,
     "surveyId" integer not null,
     foreign key ("surveyId") references "Surveys" (id),
     "creatorId" integer not null,

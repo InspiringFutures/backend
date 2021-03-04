@@ -69,22 +69,22 @@ export class SurveyController {
             updatedAt: survey.updatedAt,
             updatedBy: survey.updater.name,
             content: survey.content.content,
+            autoSave: survey.content.autoSave,
         };
     }
 
     @Post(':id/content')
     @NeedsAdmin
-    async setContent(@Param('id') surveyId, @Query('autoSave') autoSaveStr, @Body() content) {
+    async setContent(@Param('id') surveyId, @Body() content) {
         const admin = this.userService.currentUser()!;
-        const autoSave = autoSaveStr && autoSaveStr === 'true';
         const survey = await this.hasSurveyAccess(surveyId, AccessLevel.edit);
 
-        await survey.$create('version', {content: content, creatorId: admin.id});
+        await survey.$create('version', {content: content, creatorId: admin.id, autoSave: content.autoSave});
 
-        if (!autoSave) {
-            survey.content = content;
-            await survey.save();
-        }
+        survey.content = content;
+        survey.updaterId = admin.id;
+        await survey.save();
+
         return {success: true, message: "Saved successfully"};
     }
 

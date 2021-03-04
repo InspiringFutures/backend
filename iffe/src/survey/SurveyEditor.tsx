@@ -23,7 +23,7 @@ import { Sidebar } from "./Sidebar";
 import { getCountIncluding, useTriggeredTimer } from "./utils";
 import { EditorAction, EditorContext, EditorState } from "./EditorContext";
 import { ContentEditor } from "./Editors";
-import { autoSaveSurvey, saveSurvey, SurveyInfo } from "./api";
+import { saveSurvey, SurveyInfo } from "./api";
 import { ImportDialog } from './ImportDialog';
 
 interface SurveyEditorProps
@@ -39,11 +39,8 @@ function editorReducer(state: EditorState, action: EditorAction) {
     return state;
 }
 
-function useAutoSave<T>(dirty: boolean, content: T, autoSaveCallback: (value: T) => void) {
-    function callback() {
-        autoSaveCallback(content);
-    }
-    const [queueAutoSave, cancelAutoSave, flushAutoSave] = useTriggeredTimer(callback);
+function useAutoSave<T>(dirty: boolean, content: T, autoSaveCallback: () => void) {
+    const [queueAutoSave, cancelAutoSave, flushAutoSave] = useTriggeredTimer(autoSaveCallback);
 
     useEffect(() => {
         if (dirty) {
@@ -66,8 +63,8 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
     const {enqueueSnackbar} = useSnackbar();
     const [saving, setSaving] = useState(false);
 
-    const flushAutoSave = useAutoSave(dirty, content, (autoSaveContent) => {
-        autoSaveSurvey(surveyInfo.id, autoSaveContent);
+    const flushAutoSave = useAutoSave(dirty, content,  () => {
+        save(true);
     });
 
     useEffect(() => {
@@ -128,14 +125,15 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
         }
     }
 
-    const save = async () => {
+    const save = async (isAuto?: boolean) => {
         try {
             setSaving(true);
-            const {success, message} = await saveSurvey(surveyInfo.id, content);
+            const {success, message} = await saveSurvey(surveyInfo.id, content, !!isAuto);
             if (success) {
                 actions.clearDirty();
             }
-            enqueueSnackbar(message, {variant: success ? 'success' : 'error'});
+            enqueueSnackbar(isAuto ? <div><b>Auto-save</b><br />{message}</div> : message,
+                {variant: isAuto ? success ? 'info' : 'warning' : success ? 'success' : 'error'});
         } finally {
             setSaving(false);
         }

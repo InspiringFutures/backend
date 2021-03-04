@@ -41,7 +41,7 @@ export function loadSurvey(surveyId: number | string | undefined, setContent: (v
         });
 }
 
-export const saveSurvey = async (surveyId: number | string | undefined, content: SurveyContent[]) => {
+export const saveSurvey = async (surveyId: number | string | undefined, content: SurveyContent[], autoSave: boolean) => {
     try {
         const result = await fetch(`${endpoint}/survey/${surveyId}/content`, {
             headers: {
@@ -49,7 +49,7 @@ export const saveSurvey = async (surveyId: number | string | undefined, content:
                 'Content-Type': 'application/json'
             },
             method: 'POST',
-            body: JSON.stringify({content}),
+            body: JSON.stringify({content, autoSave}),
         });
         const json = await result.json();
         return json as { success: boolean; message: string };
@@ -77,15 +77,4 @@ export function loadSurveys(surveyId: number, setSurveys: (value: SurveySummary[
         .catch(e => {
             setError(extractErrorMessage(e));
         });
-}
-
-export function autoSaveSurvey(surveyId: number, autoSaveContent: SurveyContent[]) {
-    fetch(`${endpoint}/survey/${surveyId}/content?autoSave=true`, {
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        },
-        method: 'POST',
-        body: JSON.stringify({content: autoSaveContent}),
-    });
 }

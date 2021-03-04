@@ -13,7 +13,7 @@ export class Survey extends Model<Survey> {
     name: string;
 
     @Column(DataTypes.JSON)
-    content: { content: any };
+    content: { content: any; autoSave?: boolean };
 
     @Column
     updaterId: number;

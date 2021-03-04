@@ -17,6 +17,9 @@ export class SurveyVersion extends Model<SurveyVersion> {
     @Column(DataTypes.JSON)
     content: { content: any };
 
+    @Column
+    autoSave: boolean;
+
     @ForeignKey(() => Survey)
     @Column
     surveyId: number;
