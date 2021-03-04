@@ -134,6 +134,7 @@ export function ImportDialog({
                 </Button>
                 <Button disabled={!anySelected} onClick={() => {
                     survey?.content && addContent(survey?.content.filter(content => selectedContentIds[content.id]));
+                    setSelectedContentIds({});
                     close();
                 }} color="primary">
                     Import
