@@ -3,7 +3,7 @@ import { RouteComponentProps } from "@reach/router";
 import { SurveyEditor } from "./SurveyEditor";
 import { LinearProgress } from "@material-ui/core";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
-import { loadSurvey, saveSurvey, SurveyInfo } from "./api";
+import { loadSurvey, SurveyInfo } from "./api";
 
 interface SurveyEditorLoaderProps extends RouteComponentProps {
     surveyId?: string
@@ -20,7 +20,7 @@ export function SurveyEditorLoader({surveyId}: SurveyEditorLoaderProps) {
 
 
     return content ?
-        <SurveyEditor saveContent={(content) => saveSurvey(surveyId, content)} surveyInfo={content} />
+        <SurveyEditor surveyInfo={content} />
     :
         <div className={classes.root}>
             {error && <div className={classes.error}>Error loading survey: {error}</div>}

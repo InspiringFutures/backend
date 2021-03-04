@@ -3,7 +3,7 @@ import {
     Get,
     Injectable,
     Param,
-    Post,
+    Post, Query,
     Render,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
@@ -74,10 +74,17 @@ export class SurveyController {
 
     @Post(':id/content')
     @NeedsAdmin
-    async setContent(@Param('id') surveyId, @Body() content) {
+    async setContent(@Param('id') surveyId, @Query('autoSave') autoSaveStr, @Body() content) {
+        const admin = this.userService.currentUser()!;
+        const autoSave = autoSaveStr && autoSaveStr === 'true';
         const survey = await this.hasSurveyAccess(surveyId, AccessLevel.edit);
-        survey.content = content;
-        await survey.save();
+
+        await survey.$create('version', {content: content, creatorId: admin.id});
+
+        if (!autoSave) {
+            survey.content = content;
+            await survey.save();
+        }
         return {success: true, message: "Saved successfully"};
     }
 

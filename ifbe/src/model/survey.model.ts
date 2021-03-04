@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 
 import { Admin } from "./admin.model";
 import { SurveyPermission } from "./surveyPermission.model";
+import { SurveyVersion } from './surveyVersion.model';
 
 type AdminWithPermission = Admin & { SurveyPermission: SurveyPermission };
 
@@ -25,4 +26,7 @@ export class Survey extends Model<Survey> {
 
     @HasMany(() => SurveyPermission)
     permissions: SurveyPermission[];
+
+    @HasMany(() => SurveyVersion)
+    versions: SurveyVersion[];
 }

@@ -103,5 +103,6 @@ create table "SurveyVersions" (id serial primary key,
     foreign key ("surveyId") references "Surveys" (id),
     "creatorId" integer not null,
     foreign key ("creatorId") references "Admins" (id),
-	"createdAt" timestamp not null default now()
+	"createdAt" timestamp not null default now(),
+	"updatedAt" timestamp not null default now()
 );

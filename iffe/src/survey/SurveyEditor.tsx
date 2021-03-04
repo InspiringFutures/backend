@@ -20,16 +20,15 @@ import { PreviewDialog } from "./PreviewDialog";
 import { MakeDialog } from "./MakeDialog";
 import { useUndoStack } from "./useUndoStack";
 import { Sidebar } from "./Sidebar";
-import { getCountUnder } from "./utils";
+import { getCountUnder, useTriggeredTimer } from "./utils";
 import { EditorAction, EditorContext, EditorState } from "./EditorContext";
 import { ContentEditor } from "./Editors";
-import { SurveyInfo } from "./api";
+import { autoSaveSurvey, saveSurvey, SurveyInfo } from "./api";
 import { ImportDialog } from './ImportDialog';
 
 interface SurveyEditorProps
 {
     surveyInfo: SurveyInfo;
-    saveContent: (content: SurveyContent[]) => Promise<{message: string; success: boolean}>;
 }
 
 function editorReducer(state: EditorState, action: EditorAction) {
@@ -40,7 +39,24 @@ function editorReducer(state: EditorState, action: EditorAction) {
     return state;
 }
 
-export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
+function useAutoSave<T>(dirty: boolean, content: T, autoSaveCallback: (value: T) => void) {
+    function callback() {
+        autoSaveCallback(content);
+    }
+    const [queueAutoSave, cancelAutoSave, flushAutoSave] = useTriggeredTimer(callback);
+
+    useEffect(() => {
+        if (dirty) {
+            queueAutoSave();
+        } else {
+            cancelAutoSave();
+        }
+    }, [dirty, content, queueAutoSave, cancelAutoSave]);
+
+    return flushAutoSave;
+}
+
+export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
     const classes = useStyles();
 
     const {content, canUndo, canRedo, actions, dirty} = useUndoStack<SurveyContent[]>(surveyInfo.content);
@@ -50,18 +66,30 @@ export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
     const {enqueueSnackbar} = useSnackbar();
     const [saving, setSaving] = useState(false);
 
+    const flushAutoSave = useAutoSave(dirty, content, (autoSaveContent) => {
+        autoSaveSurvey(surveyInfo.id, autoSaveContent);
+    });
+
     useEffect(() => {
         function unload(e: BeforeUnloadEvent) {
             if (actions.getDirty()) {
+                flushAutoSave();
                 e.preventDefault();
                 return e.returnValue = "There are unsaved changes";
             }
         }
+        function visibilityChange() {
+            if (document.visibilityState !== 'visible') {
+                flushAutoSave();
+            }
+        }
         window.addEventListener("beforeunload", unload);
+        document.addEventListener("visibilitychange", visibilityChange);
         return () => {
             window.removeEventListener("beforeunload", unload);
+            document.removeEventListener("visibilitychange", visibilityChange);
         };
-    }, [actions]);
+    }, [actions, flushAutoSave]);
 
     function onDragEnd(drop: DropResult) {
         if (drop.reason === 'CANCEL') {
@@ -103,7 +131,7 @@ export function SurveyEditor({surveyInfo, saveContent}: SurveyEditorProps) {
     const save = async () => {
         try {
             setSaving(true);
-            const {success, message} = await saveContent(content);
+            const {success, message} = await saveSurvey(surveyInfo.id, content);
             if (success) {
                 actions.clearDirty();
             }

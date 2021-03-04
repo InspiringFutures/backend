@@ -10,11 +10,12 @@ import {
 
 import { Admin } from "./admin.model";
 import { Survey } from "./survey.model";
+import { DataTypes } from 'sequelize';
 
 @Table
 export class SurveyVersion extends Model<SurveyVersion> {
-    @Column
-    content: string;
+    @Column(DataTypes.JSON)
+    content: { content: any };
 
     @ForeignKey(() => Survey)
     @Column

@@ -26,11 +26,6 @@ export class UserService {
     }
 
     currentUser(): User|null {
-        return {
-            id: 1,
-            name: "Robin Auto",
-            level: AdminLevel.super
-        };
         if (this.cachedCurrentUser) return this.cachedCurrentUser;
         if (this.request.session[USER_SESSION_KEY]) {
             return this.cachedCurrentUser = this.request.session[USER_SESSION_KEY];
