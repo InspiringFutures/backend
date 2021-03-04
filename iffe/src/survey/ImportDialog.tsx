@@ -15,6 +15,8 @@ import { Content } from "./SurveyContent";
 import { InjectedDialogProps } from "./MakeDialog";
 import { loadSurvey, loadSurveys, SurveyInfo, SurveySummary } from "./api";
 import { ContentTypeInfo } from "./Sidebar";
+import { getCountIncluding } from "./utils";
+import { ModifyOptions } from "./QuestionEditor";
 
 interface ImportProps {
     addContent: (addedContent: Content[]) => void;
@@ -43,8 +45,10 @@ export function ImportDialog({
     const [surveys, setSurveys] = useState<SurveySummary[]>();
 
     useEffect(() => {
-        loadSurveys(surveyId, setSurveys, setError);
-    }, [surveyId]);
+        if (isOpen) {
+            loadSurveys(surveyId, setSurveys, setError);
+        }
+    }, [surveyId, isOpen]);
 
     const [selectedSurveyId, setSelectedSurveyId] = useState<number>();
     const [survey, setSurvey] = useState<SurveyInfo>();
@@ -66,8 +70,18 @@ export function ImportDialog({
         }
     }, [selectedSurveyId]);
 
-    function handleToggle(id: string) {
-        setSelectedContentIds({...selectedContentIds, [id]: !selectedContentIds[id]});
+    function handleToggle(index: number) {
+        if (survey) {
+            const content = survey.content;
+            const toggleCount = getCountIncluding(content, index);
+            const id = content[index].id;
+            const newValue =  !selectedContentIds[id];
+            const newIds = {...selectedContentIds};
+            for (let i = index; i < index + toggleCount; i++) {
+                newIds[content[i].id] = newValue;
+            }
+            setSelectedContentIds(newIds);
+        }
     }
 
     const anySelected = Object.values(selectedContentIds).some(x => x);
@@ -103,9 +117,9 @@ export function ImportDialog({
                             <CircularProgress className={classes.progress} />
                             Loading survey...
                         </div> : <List>
-                            {survey.content.map(content => {
+                            {survey.content.map((content, index) => {
                                 const labelId = "import-label-" + selectedSurveyId + "-" + content.id;
-                                return <ListItem key={content.id} button dense onClick={() => handleToggle(content.id)}>
+                                return <ListItem key={content.id} button dense onClick={() => handleToggle(index)} className={content.type !== 'SectionHeader' ? classes.subItem : undefined}>
                                     <ListItemIcon>
                                         <Checkbox
                                             edge="start"
@@ -123,6 +137,7 @@ export function ImportDialog({
                                     </ListItemText>
                                 </ListItem>;
                             })}
+                            {survey.content.length === 0 && <em>That survey contains no questions.</em>}
                         </List>
                         )}
                     </div>}
@@ -158,6 +173,9 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         progress: {
             marginBottom: '2em',
+        },
+        subItem: {
+            marginLeft: theme.spacing(3),
         },
     })
 );
