@@ -131,7 +131,7 @@ export const EditableText = ({
     }, [isValid]);
 
     const handleKey = (e: React.KeyboardEvent) => {
-        if (!multiLine && e.key === "Enter") {
+        if ((!multiLine || e.ctrlKey || e.metaKey) && e.key === "Enter") {
             save({movement: 1});
         } else if (e.key === "Escape") {
             cancel();
