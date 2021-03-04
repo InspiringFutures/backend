@@ -77,7 +77,9 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
         }
         function visibilityChange() {
             if (document.visibilityState !== 'visible') {
-                flushAutoSave();
+                if (actions.getDirty()) {
+                    flushAutoSave();
+                }
             }
         }
         window.addEventListener("beforeunload", unload);
@@ -148,9 +150,10 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
                     isOpen={isOpen} open={open} close={close}  addContent={addContent} surveyId={surveyInfo.id}/>}</MakeDialog>
                 <AppBar position="fixed" className={classes.appBar}>
                     <Toolbar>
-                        <Button onClick={() => window.history.length > 0 ? window.history.back() : window.close()}>
-                            <ArrowBackIcon className={classes.backArrow} />
-                        </Button>
+                        {window.history.length > 0 && <Button
+                            onClick={() => window.history.back()}>
+                            <ArrowBackIcon className={classes.backArrow}/>
+                        </Button>}
                         <Spacer width={16}/>
                         <Typography variant="h6" noWrap>
                             {surveyInfo.name}
