@@ -70,12 +70,23 @@ export function ImportDialog({
         }
     }, [selectedSurveyId]);
 
+    const anySelected = Object.values(selectedContentIds).some(x => x);
+    const allSelected = survey ? Object.values(selectedContentIds).filter(s => s).length === survey.content.length : false;
+
     function handleToggle(index: number) {
         if (survey) {
             const content = survey.content;
-            const toggleCount = getCountIncluding(content, index);
-            const id = content[index].id;
-            const newValue =  !selectedContentIds[id];
+            let toggleCount;
+            let newValue;
+            if (index === -1) {
+                index = 0;
+                toggleCount = content.length;
+                newValue = !allSelected;
+            } else {
+                toggleCount = getCountIncluding(content, index);
+                const id = content[index].id;
+                newValue =  !selectedContentIds[id];
+            }
             const newIds = {...selectedContentIds};
             for (let i = index; i < index + toggleCount; i++) {
                 newIds[content[i].id] = newValue;
@@ -84,7 +95,6 @@ export function ImportDialog({
         }
     }
 
-    const anySelected = Object.values(selectedContentIds).some(x => x);
     return (
         <Dialog
             open={isOpen}
@@ -117,6 +127,21 @@ export function ImportDialog({
                             <CircularProgress className={classes.progress} />
                             Loading survey...
                         </div> : <List>
+                            {survey.content.length > 0 && <ListItem button dense onClick={() => handleToggle(-1)}>
+                                <ListItemIcon>
+                                    <Checkbox
+                                        edge="start"
+                                        checked={allSelected}
+                                        indeterminate={anySelected && !allSelected}
+                                        tabIndex={-1}
+                                        disableRipple
+                                        inputProps={{ 'aria-labelledby': "import-label-select-all" }}
+                                    />
+                                </ListItemIcon>
+                                <ListItemText id="import-label-select-all">
+                                    Select All
+                                </ListItemText>
+                            </ListItem>}
                             {survey.content.map((content, index) => {
                                 const labelId = "import-label-" + selectedSurveyId + "-" + content.id;
                                 return <ListItem key={content.id} button dense onClick={() => handleToggle(index)} className={content.type !== 'SectionHeader' ? classes.subItem : undefined}>
