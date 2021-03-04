@@ -80,7 +80,7 @@ create table "Tokens" (id serial primary key,
 
 create table "Surveys" (id serial primary key,
 	name character varying not null,
-    content json not null default '{}', -- Latest version has its content put in here.
+    content json not null default '{"content": {}}', -- Latest version has its content put in here.
     "updaterId" integer not null,
     foreign key ("updaterId") references "Admins" (id),
 	"createdAt" timestamp not null default now(),

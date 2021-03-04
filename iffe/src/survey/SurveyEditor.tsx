@@ -233,6 +233,17 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
                                     }</Draggable>)}
                             </EditorContext.Provider>
                             {provided.placeholder}
+                            {content.length === 0 && <div className={classes.introductionWrapper}>
+                                <div>
+                                    <h4>Welcome to the Inspiring Futures Survey Editor</h4>
+                                    <p>Add questions by:</p>
+                                    <ul>
+                                        <li>clicking on the type of question you want from the palette on the right,</li>
+                                        <li>dragging questions from the palette on the right, or</li>
+                                        <li>clicking 'Import' to bring in questions from another survey.</li>
+                                    </ul>
+                                </div>
+                            </div>}
                         </main>
                     }
                 </Droppable>
@@ -303,6 +314,12 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         backArrow: {
             color: theme.palette.primary.contrastText,
+        },
+        introductionWrapper: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
         },
     }),
 );
