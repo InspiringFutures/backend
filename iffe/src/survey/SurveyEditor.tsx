@@ -149,9 +149,8 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
         }
     }
 
-    const save = async (isAuto?: boolean) => {
+    const saveAync = async (isAuto?: boolean) => {
         try {
-            setSaving(true);
             const {success, message} = await saveSurvey(surveyInfo.id, content, !!isAuto);
             if (success) {
                 actions.clearDirty();
@@ -161,6 +160,15 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
         } finally {
             setSaving(false);
         }
+    };
+
+    const save = (isAuto?: boolean) => {
+        setSaving((isSaving) => {
+            if (!isSaving) {
+                saveAync(isAuto);
+            }
+            return true;
+        });
     };
 
     const getModifyFor = useMemo(() => (index: number) => {
