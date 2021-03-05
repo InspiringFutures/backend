@@ -1,16 +1,3 @@
-import {
-    CheckboxGridQuestion,
-    CheckboxQuestion,
-    ChoiceGridQuestion,
-    ChoiceQuestion,
-    ConsentQuestion,
-    Content,
-    ParagraphQuestion,
-    SectionHeader,
-    TextBlock,
-    TextQuestion,
-    YesNoQuestion
-} from "./SurveyContent";
 import React, {
     ChangeEvent,
     FunctionComponent,
@@ -29,11 +16,29 @@ import {
     TextField
 } from "@material-ui/core";
 import Typography from "@material-ui/core/Typography";
-import { escapedNewLineToLineBreakTag } from "./EditableText";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
+
+import {
+    CheckboxGridQuestion,
+    CheckboxQuestion,
+    ChoiceGridQuestion,
+    ChoiceQuestion,
+    ConsentQuestion,
+    Content,
+    ParagraphQuestion,
+    SectionHeader,
+    TextBlock,
+    TextQuestion,
+    YesNoQuestion
+} from "./SurveyContent";
+import { escapedNewLineToLineBreakTag } from "./EditableText";
+
+import RadioButtonUncheckedIcon from "@material-ui/icons/RadioButtonUnchecked";
+import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
 
 type ViewerProps<C extends Content> = {
     content: C;
+    active?: boolean;
 };
 type Viewer<C extends Content> = FunctionComponent<ViewerProps<C>>;
 
@@ -144,7 +149,7 @@ const CheckboxQuestionViewer: Viewer<CheckboxQuestion> = ({content}) => {
     </FormControl>;
 };
 
-const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
+const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content, active}) => {
     const rows = useMemo(() => content.rows || [], [content.rows]);
     const columns = content.columns || [];
 
@@ -192,7 +197,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
                 {rows.map((row, index) => <tr key={index}>
                     <th>{row}</th>
                     {columns.map((column, colIndex) => <td key={colIndex}>
-                        <input type="radio" checked={isChecked(index, colIndex)} name={`${index}:${colIndex}`} onChange={changeHandler} />
+                        {active ? <Radio checked={isChecked(index, colIndex)} name={`${index}:${colIndex}`} onChange={changeHandler} /> : <RadioButtonUncheckedIcon />}
                     </td>)}
                 </tr>)}
                 </tbody>
@@ -204,7 +209,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
     </>;
 };
 
-const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content}) => {
+const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content, active}) => {
     const rows = content.rows || [];
     const columns = content.columns || [];
 
@@ -222,13 +227,15 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content}) => 
                 <tbody>
                 {rows.map((row, index) => <tr key={index}>
                     <th>{row}</th>
-                    {columns.map((column, colIndex) => <td key={colIndex}><input type="checkbox" /></td>)}
+                    {columns.map((column, colIndex) => <td key={colIndex}>
+                        {active ? <Checkbox /> : <CheckBoxOutlineBlankIcon />}
+                    </td>)}
                 </tr>)}
                 </tbody>
             </table>
             : <div><em>No rows/columns defined</em></div>}
         {content.commentsPrompt &&
-        <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10}/>
+            <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10}/>
         }
     </>;
 };
@@ -248,7 +255,7 @@ export const Viewers: { [name in Content["type"]]: Viewer<any> } = {
 
 export const ContentViewer = ({content}: ViewerProps<Content>) => {
     const Viewer = Viewers[content.type];
-    return <Viewer content={content as any}/>;
+    return <Viewer content={content as any} active={true}/>;
 };
 
 const useStyles = makeStyles((theme: Theme) =>
