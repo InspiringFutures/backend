@@ -1,5 +1,11 @@
-import React, { useEffect, useReducer, useRef, useState } from 'react';
-import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd';
+import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import {
+    DragDropContext,
+    Draggable,
+    DraggableProvided,
+    Droppable,
+    DropResult
+} from 'react-beautiful-dnd';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
 import AppBar from '@material-ui/core/AppBar';
@@ -25,6 +31,7 @@ import { EditorAction, EditorContext, EditorState } from "./EditorContext";
 import { ContentEditor } from "./Editors";
 import { saveSurvey, SurveyInfo } from "./api";
 import { ImportDialog } from './ImportDialog';
+import { ModifyFunction } from "./QuestionEditor";
 
 interface SurveyEditorProps
 {
@@ -51,6 +58,21 @@ function useAutoSave<T>(dirty: boolean, content: T, autoSaveCallback: () => void
     }, [dirty, content, queueAutoSave, cancelAutoSave]);
 
     return flushAutoSave;
+}
+
+interface WrapContentEditorParams {
+    content: Content;
+    provided: DraggableProvided;
+    getModifyFor: (index: number) => ModifyFunction;
+    index: number;
+}
+
+function WrapContentEditor({content, provided, getModifyFor, index}: WrapContentEditorParams) {
+    const modify = useMemo(() => getModifyFor(index), [getModifyFor, index]);
+    return <ContentEditor content={content} ref={provided.innerRef}
+                          draggableProps={provided.draggableProps}
+                          dragHandleProps={provided.dragHandleProps}
+                          modify={modify}/>;
 }
 
 export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
@@ -141,6 +163,41 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
         }
     };
 
+    const getModifyFor = useMemo(() => (index: number) => {
+        const modify: ModifyFunction = (newC, options) => {
+            const newContent = [...content];
+            let on: string | undefined;
+            if (newC === "duplicate") {
+                const sectionCount = getCountIncluding(content, index);
+                const dupCount = options && options.sectionOnly ? 1 : sectionCount;
+                const toAdd = [];
+                for (let i = index; i < index + dupCount; i++) {
+                    const newC = JSON.parse(JSON.stringify(content[i]));
+                    newC.id = ulid();
+                    if (on === undefined) {
+                        on = newC.id;
+                    }
+                    toAdd.push(newC);
+                }
+                newContent.splice(index + sectionCount, 0, ...toAdd);
+            } else if (newC === undefined) {
+                const sectionCount = getCountIncluding(content, index);
+                const deleteCount = options && options.sectionOnly ? 1 : sectionCount;
+                newContent.splice(index, deleteCount);
+                if (newContent[index]) {
+                    on = newContent[index].id;
+                }
+            } else {
+                newContent.splice(index, 1, newC);
+            }
+            actions.set(newContent);
+            if (on) {
+                editorDispatch({type: "focus", on});
+            }
+        };
+        return modify;
+    }, [actions, content]);
+
     return (<ThemeProvider theme={theme}>
         <DragDropContext onDragEnd={onDragEnd}>
             <div className={classes.root}>
@@ -196,40 +253,7 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
                                                                       index={index}
                                                                       isDragDisabled={hasSingleSection && c.type === 'SectionHeader'}>
                                     {(provided) =>
-                                        <ContentEditor content={c} ref={provided.innerRef}
-                                                       draggableProps={provided.draggableProps}
-                                                       dragHandleProps={provided.dragHandleProps}
-                                                       modify={(newC, options) => {
-                                                           const newContent = [...content];
-                                                           let on: string | undefined;
-                                                           if (newC === "duplicate") {
-                                                               const sectionCount = getCountIncluding(content, index);
-                                                               const dupCount = options && options.sectionOnly ? 1 : sectionCount;
-                                                               const toAdd = [];
-                                                               for (let i = index; i < index + dupCount; i++) {
-                                                                   const newC = JSON.parse(JSON.stringify(content[i]));
-                                                                   newC.id = ulid();
-                                                                   if (on === undefined) {
-                                                                       on = newC.id;
-                                                                   }
-                                                                   toAdd.push(newC);
-                                                               }
-                                                               newContent.splice(index + sectionCount, 0, ...toAdd);
-                                                           } else if (newC === undefined) {
-                                                               const sectionCount = getCountIncluding(content, index);
-                                                               const deleteCount = options && options.sectionOnly ? 1 : sectionCount;
-                                                               newContent.splice(index, deleteCount);
-                                                               if (newContent[index]) {
-                                                                   on = newContent[index].id;
-                                                               }
-                                                           } else {
-                                                               newContent.splice(index, 1, newC);
-                                                           }
-                                                           actions.set(newContent);
-                                                           if (on) {
-                                                               editorDispatch({type: "focus", on});
-                                                           }
-                                                       }}/>
+                                        <WrapContentEditor content={c} provided={provided} getModifyFor={getModifyFor} index={index} />
                                     }</Draggable>)}
                             </EditorContext.Provider>
                             {provided.placeholder}

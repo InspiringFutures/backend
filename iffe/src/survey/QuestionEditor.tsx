@@ -10,9 +10,12 @@ import { sharedStyles } from "./styles";
 export interface ModifyOptions {
     sectionOnly?: boolean;
 }
+
+export type ModifyFunction = (newContent: SurveyContent | undefined | "duplicate", modifyOptions?: ModifyOptions) => void;
+
 export type EditorProps<C extends Content> = {
     content: C;
-    modify: (newContent: SurveyContent | undefined | "duplicate", modifyOptions?: ModifyOptions) => void;
+    modify: ModifyFunction;
 };
 export type Editor<C extends Content> = FunctionComponent<EditorProps<C>>;
 
