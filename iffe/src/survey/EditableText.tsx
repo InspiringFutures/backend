@@ -135,7 +135,7 @@ export const EditableText = ({
             save({movement: 1});
         } else if (e.key === "Escape") {
             cancel();
-        } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        } else if (!multiLine && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
             save({movement: e.key === "ArrowUp" ? -1 : 1});
         }
     };
