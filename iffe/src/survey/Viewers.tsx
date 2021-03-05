@@ -11,7 +11,14 @@ import {
     TextQuestion,
     YesNoQuestion
 } from "./SurveyContent";
-import React, { FunctionComponent, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+    ChangeEvent,
+    FunctionComponent,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
+} from "react";
 import {
     Checkbox,
     FormControl,
@@ -165,6 +172,11 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
         return checks[row] === col;
     }
 
+    function changeHandler(e: ChangeEvent<HTMLInputElement>) {
+        const [row, col] = e.target.name.split(":").map(n => parseInt(n, 10));
+        setChecked(row, col);
+    }
+
     return <>
         <FormLabel>{content.title}</FormLabel>
         <Description content={content}/>
@@ -179,13 +191,13 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content}) => {
                 <tbody>
                 {rows.map((row, index) => <tr key={index}>
                     <th>{row}</th>
-                    {columns.map((column, colIndex) => <td key={colIndex}><Radio
-                        checked={isChecked(index, colIndex)}
-                        onChange={(checked) => setChecked(index, colIndex)}/></td>)}
+                    {columns.map((column, colIndex) => <td key={colIndex}>
+                        <input type="radio" checked={isChecked(index, colIndex)} name={`${index}:${colIndex}`} onChange={changeHandler} />
+                    </td>)}
                 </tr>)}
                 </tbody>
             </table>
-            : <em>No rows/columns defined</em>}
+            : <div><em>No rows/columns defined</em></div>}
         {content.commentsPrompt &&
         <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10}/>
         }
@@ -210,11 +222,11 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content}) => 
                 <tbody>
                 {rows.map((row, index) => <tr key={index}>
                     <th>{row}</th>
-                    {columns.map((column, colIndex) => <td key={colIndex}><Checkbox/></td>)}
+                    {columns.map((column, colIndex) => <td key={colIndex}><input type="checkbox" /></td>)}
                 </tr>)}
                 </tbody>
             </table>
-            : <em>No rows/columns defined</em>}
+            : <div><em>No rows/columns defined</em></div>}
         {content.commentsPrompt &&
         <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10}/>
         }

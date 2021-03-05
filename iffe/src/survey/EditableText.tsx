@@ -196,12 +196,11 @@ export const EditableText = ({
             :
             <span className={`${classes.editableHolder} ${holderClassName ?? ""}`}
                   onClick={startEdit}>
-                {checkboxContent} {labelElement}
-                {text === undefined ?
-                    <i className={classes.placeholder}>{placeHolder}</i> : text}<Spacer/>
-                {onDelete.current &&
-                <IconButton className={classes.editableInlineButton} onClick={() => onDelete.current && onDelete.current()}
-                            size="small"><DeleteIcon/></IconButton>}
+                {checkboxContent}
+                {labelElement}
+                {text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : text}
+                <Spacer/>
+                {onDelete.current && <DeleteIcon className={classes.cheapIconButton} onClick={() => onDelete.current && onDelete.current()} />}
             </span>;
 };
 
@@ -251,6 +250,17 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         placeholder: {
             color: '#777',
+        },
+        cheapIconButton: {
+            borderRadius: '50%',
+            color: 'rgba(0,0,0,0.54)',
+            padding: 3,
+            cursor: 'pointer',
+            width: 30,
+            height: 30,
+            '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.04)',
+            },
         },
     }),
 );
