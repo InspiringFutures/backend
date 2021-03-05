@@ -8,14 +8,21 @@ export enum AccessLevel {
 
 export const AccessLevels = [AccessLevel.view, AccessLevel.edit, AccessLevel.owner];
 
-export function checkAccessLevel(neededLevel: AccessLevel, itemWithPermission: { permission: AccessLevel }) {
-    AccessLevels.find(level => {
+export function filterAccessLevel(neededLevel: AccessLevel, itemWithPermission: { permission: AccessLevel }) {
+    for (let level of AccessLevels) {
         if (neededLevel === level) {
             return true;
         }
         if (level === itemWithPermission.permission) {
-            throw new ForbiddenException("You need at least " + neededLevel + " to do that");
+            return false;
         }
-        return false;
-    });
+    }
+    // Inaccessible
+    return false;
+}
+
+export function checkAccessLevel(neededLevel: AccessLevel, itemWithPermission: { permission: AccessLevel }) {
+    if (!filterAccessLevel(neededLevel, itemWithPermission)) {
+        throw new ForbiddenException("You need at least " + neededLevel + " to do that");
+    }
 }

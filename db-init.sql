@@ -107,3 +107,22 @@ create table "SurveyVersions" (id serial primary key,
 	"createdAt" timestamp not null default now(),
 	"updatedAt" timestamp not null default now()
 );
+
+create type "ALLOCATION_TYPE" as enum ('oneoff', 'initial');
+
+create table "SurveyAllocations" (id serial primary key,
+    "type" "ALLOCATION_TYPE" not null,
+	note character varying null,
+	"openAt"  timestamp null,
+	"closeAt"  timestamp null,
+    "surveyId" integer not null,
+    foreign key ("surveyId") references "Surveys" (id),
+    "groupId" integer not null,
+    foreign key ("groupId") references "Groups" (id),
+    "creatorId" integer not null,
+    foreign key ("creatorId") references "Admins" (id),
+	"createdAt" timestamp not null default now(),
+	"updatedAt" timestamp not null default now()
+);
+
+CREATE UNIQUE INDEX ON "SurveyAllocations" ("groupId") WHERE "type" = 'initial';

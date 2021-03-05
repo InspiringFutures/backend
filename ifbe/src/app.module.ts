@@ -29,8 +29,9 @@ import { SurveyPermission } from "./model/surveyPermission.model";
 import { SurveyService } from "./service/survey.service";
 import { SurveyController } from "./controller/survey.controller";
 import { GroupAdminController } from "./controller/groupAdmin.controller";
+import { SurveyAllocation } from './model/surveyAllocation.model';
 
-const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry, Token, Survey, SurveyPermission, SurveyVersion];
+const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry, Token, Survey, SurveyPermission, SurveyVersion, SurveyAllocation];
 
 @Module({
     providers: [StorageServiceProvider],

@@ -7,6 +7,7 @@ import { Survey } from "../model/survey.model";
 import { SurveyPermission } from "../model/surveyPermission.model";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { getOrElse } from "../util/functional";
+import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
 
 type SurveyWithAccessLevel = Survey & { permission: AccessLevel };
 
@@ -14,6 +15,7 @@ export class SurveyService {
     constructor(@InjectModel(Survey) private surveyModel: typeof Survey,
                 @InjectModel(Admin) private adminModel: typeof Admin,
                 @InjectModel(SurveyPermission) private surveyPermissionModel: typeof SurveyPermission,
+                @InjectModel(SurveyAllocation) private surveyAllocationModel: typeof SurveyAllocation,
     ) {}
 
     async surveysForUser(admin: User) {
@@ -82,5 +84,9 @@ export class SurveyService {
             const user = await this.adminModel.findOne({where: {email: newUser.email}, rejectOnEmpty: true});
             await this.surveyPermissionModel.create({adminId: user.id, surveyId: survey.id, level: newUser.permission});
         }
+    }
+
+    async addAllocation(surveyId:number, groupId: number, type: SurveyAllocationType, openAt: Date | null, closeAt: Date | null, note: string, user: User) {
+        await this.surveyAllocationModel.create({type, note, openAt, closeAt, groupId, surveyId, creatorId: user.id});
     }
 }

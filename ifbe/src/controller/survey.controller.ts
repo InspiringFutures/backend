@@ -1,9 +1,11 @@
 import {
-    Body,
+    BadRequestException,
+    Body, Delete,
     Get,
     Injectable,
     Param,
-    Post, Query,
+    ParseIntPipe,
+    Post,
     Render,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
@@ -13,10 +15,18 @@ import { Admin } from '../model/admin.model';
 import { NeedsAdmin } from '../util/guard';
 import { redirect } from '../util/redirect';
 import { UserService } from '../service/user.service';
-import { getAll } from '../util/functional';
-import { AccessLevel, checkAccessLevel } from "../model/accessLevels";
-import { SurveyService } from "../service/survey.service";
-import { Survey } from "../model/survey.model";
+import { getAll, getWithPermission } from '../util/functional';
+import { AccessLevel, checkAccessLevel } from '../model/accessLevels';
+import { SurveyService } from '../service/survey.service';
+import { Survey } from '../model/survey.model';
+import { Group } from '../model/group.model';
+import { GroupService } from '../service/group.service';
+import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
+
+function isSet(value: string | null | undefined): string | null {
+    if (value && value !== "") return value;
+    return null;
+}
 
 @Controller('survey')
 @Injectable()
@@ -28,6 +38,9 @@ export class SurveyController {
         private surveyModel: typeof Survey,
         private readonly userService: UserService,
         private readonly surveyService: SurveyService,
+        private readonly groupService: GroupService,
+        @InjectModel(SurveyAllocation)
+        private surveyAllocationModel: typeof SurveyAllocation,
     ) {}
 
     @Post()
@@ -53,9 +66,22 @@ export class SurveyController {
     @Get(':id')
     @NeedsAdmin
     async view(@Param('id') surveyId) {
+        const user = this.userService.currentUser()!;
         const survey = await this.hasSurveyAccess(surveyId, AccessLevel.view);
+        const allocations = await survey.$get('allocations', {include: [Admin, Group]});
+        const groups = await this.groupService.groupsForUser(user, AccessLevel.edit);
         return {
-            survey: {...survey.get(), updater: survey.updater.get(), permission: survey.permission, admins: getAll(survey.admins)}
+            survey: {
+                ...survey.get(),
+                updater: survey.updater.get(),
+                permission: survey.permission,
+                admins: getAll(survey.admins),
+                allocations: getAll(allocations, s => ({
+                    group: s.group.get(),
+                    creator: s.creator.get(),
+                })),
+            },
+            groups: getWithPermission(groups),
         };
     }
 
@@ -98,10 +124,59 @@ export class SurveyController {
         throw redirect('/survey/' + surveyId);
     }
 
+    @Post(':id/allocation')
+    @NeedsAdmin
+    async addAllocation(@Param('id') surveyId,
+                        @Body('type') type: SurveyAllocationType,
+                        @Body('openAt') openAt,
+                        @Body('closeAt') closeAt,
+                        @Body('note') note: string,
+                        @Body('groupId', ParseIntPipe) groupId: number) {
+        if (type === 'initial') {
+            openAt = null;
+            closeAt = null;
+        } else if (type === 'oneoff') {
+            openAt = isSet(openAt) ?? new Date(openAt + ":00Z");
+            closeAt = isSet(closeAt) ?? new Date(closeAt + ":00Z");
+        } else {
+            throw new BadRequestException("Unknown allocation type");
+        }
+
+        const admin = this.userService.currentUser()!;
+
+        const survey = await this.hasSurveyAccess(surveyId, AccessLevel.view);
+        const group = await this.hasGroupAccess(groupId, AccessLevel.edit);
+        await this.surveyService.addAllocation(survey.id, group.id, type, openAt, closeAt, note, admin);
+        throw redirect('/survey/' + surveyId);
+    }
+
+    @Post(':id/allocation/:allocationId/delete')
+    @NeedsAdmin
+    async deleteAllocation(@Param('id', ParseIntPipe) surveyId: number, @Param('allocationId', ParseIntPipe) allocationId: number) {
+        const admin = this.userService.currentUser()!;
+
+        const allocation = await this.surveyAllocationModel.findByPk(allocationId);
+        if (allocation.surveyId !== surveyId) {
+            throw new BadRequestException("Non-matching survey ID");
+        }
+        await this.hasGroupAccess(allocation.surveyId, AccessLevel.edit);
+        await this.hasGroupAccess(allocation.groupId, AccessLevel.edit);
+
+        await allocation.destroy();
+        throw redirect('/survey/' + surveyId);
+    }
+
     private async hasSurveyAccess(surveyId: number, neededLevel: AccessLevel) {
         const admin = this.userService.currentUser()!;
         const survey = await this.surveyService.surveyForUser(admin, surveyId);
         checkAccessLevel(neededLevel, survey);
         return survey;
+    }
+
+    private async hasGroupAccess(groupId: number, neededLevel: AccessLevel) {
+        const admin = this.userService.currentUser()!;
+        const group = await this.groupService.groupForUser(admin, groupId);
+        checkAccessLevel(neededLevel, group);
+        return group;
     }
 }

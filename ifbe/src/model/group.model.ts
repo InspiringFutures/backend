@@ -3,8 +3,11 @@ import { BelongsToMany, Column, HasMany, Model, Table } from 'sequelize-typescri
 import { Admin } from "./admin.model";
 import { Client } from "./client.model";
 import { GroupPermission } from "./groupPermission.model";
+import { SurveyAllocation } from './surveyAllocation.model';
+import { Survey } from './survey.model';
 
 type AdminWithPermission = Admin & { GroupPermission: GroupPermission };
+type SurveyWithAllocation = Survey & { SurveyAllocation: SurveyAllocation };
 
 @Table
 export class Group extends Model<Group> {
@@ -31,4 +34,10 @@ export class Group extends Model<Group> {
             this.apiURL = process.env.BASE_URL + '/api/';
         }
     }
+
+    @BelongsToMany(() => Survey, () => SurveyAllocation)
+    surveys: SurveyWithAllocation[];
+
+    @HasMany(() => SurveyAllocation)
+    allocations: SurveyAllocation[];
 }

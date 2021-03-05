@@ -7,7 +7,7 @@ import { Group } from "../model/group.model";
 import { GroupPermission } from "../model/groupPermission.model";
 import { Client, ClientStatus } from '../model/client.model';
 import { getOrElse } from "../util/functional";
-import { AccessLevel } from "../model/accessLevels";
+import { AccessLevel, filterAccessLevel } from '../model/accessLevels';
 
 type GroupWithAccessLevel = Group & { permission: AccessLevel };
 
@@ -22,11 +22,11 @@ export class GroupService {
         return this.groupModel.findOne({ where: { code } });
     }
 
-    async groupsForUser(admin: User) {
+    async groupsForUser(admin: User, withPermission?: AccessLevel) {
         const groups = await this.groupModel.findAll({
             include: [{model: Admin, where: {id: admin.id}, required: admin.level !== AdminLevel.super }],
          });
-        return groups.map((g: GroupWithAccessLevel) => {
+        let groupsWithPermissions = groups.map((g: GroupWithAccessLevel) => {
             const {admins} = g;
             let permission = AccessLevel.view;
             if (admins.length === 0) {
@@ -41,7 +41,13 @@ export class GroupService {
             }
             g.permission = permission;
             return g;
-        })
+        });
+        if (withPermission !== undefined) {
+            groupsWithPermissions = groupsWithPermissions.filter((g: GroupWithAccessLevel) => {
+                return filterAccessLevel(withPermission, g);
+            });
+        }
+        return groupsWithPermissions;
     }
 
     async groupForUser(admin: User, groupId: number) {

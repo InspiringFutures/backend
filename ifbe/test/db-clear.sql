@@ -13,3 +13,4 @@ drop type if exists "ENTRY_TYPE";
 drop type if exists "JOURNAL_TYPE";
 drop type if exists "CLIENT_STATUS";
 drop type if exists "TOKEN_TYPE";
+drop type if exists "ALLOCATION_TYPE";

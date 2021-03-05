@@ -7,14 +7,8 @@ import { NeedsAdmin, NeedsSuperAdmin } from '../util/guard';
 import { redirect } from '../util/redirect';
 import { UserService } from '../service/user.service';
 import { GroupService } from '../service/group.service';
-import { getAll } from '../util/functional';
-import { AccessLevel } from "../model/accessLevels";
-import { SurveyService } from "../service/survey.service";
-import { Model } from "sequelize-typescript";
-
-function getWithPermission<T>(items: (Model<T> & { permission: AccessLevel })[]) {
-    return getAll(items, item => ({permission: item.permission}));
-}
+import { getWithPermission } from '../util/functional';
+import { SurveyService } from '../service/survey.service';
 
 @Controller('admin')
 @Injectable()
