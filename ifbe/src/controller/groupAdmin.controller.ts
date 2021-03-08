@@ -14,6 +14,8 @@ import { ClientService } from '../service/client.service';
 import { JournalService } from '../service/journal.service';
 import { AccessLevel, checkAccessLevel } from "../model/accessLevels";
 import { SurveyService } from "../service/survey.service";
+import { Group } from '../model/group.model';
+import { Survey } from '../model/survey.model';
 
 @Controller('admin/group')
 @Injectable()
@@ -33,9 +35,19 @@ export class GroupAdminController {
     @NeedsAdmin
     async group(@Param('id') groupId) {
         const group = await this.hasGroupAccess(groupId, AccessLevel.view);
+        const allocations = await group.$get('allocations', {attributes: {exclude: ['content']}, include: [Admin, Survey], order: [['openAt', 'asc NULLS FIRST'], 'id']});
         group.setApiURLfromRequestIfNotSet();
         return {
-            group: {...group.get(), permission: group.permission, clients: getAll(group.clients), admins: getAll(group.admins)}};
+            group: {
+                ...group.get(),
+                permission: group.permission,
+                clients: getAll(group.clients),
+                admins: getAll(group.admins),
+            },
+            allocations: getAll(allocations, s => ({
+                creator: s.creator.get(),
+            })),
+        };
     }
 
     @Get(':id/client/:clientId')

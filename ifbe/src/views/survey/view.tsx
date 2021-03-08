@@ -34,7 +34,9 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
     lastAllocation = allocation;
     const row = <tr>
         <form method="POST" action={url}>
-            <td>{isGroupRepeat ? "" : allocation.group.name}</td>
+            <td>
+                {isGroupRepeat ? "" : <a href={urlBuilder.absolute(`/admin/group/${allocation.groupId}`)}>{allocation.group.name}</a>}
+            </td>
             <td><textarea name="note" defaultValue={allocation.note} /></td>
             <td><input name="openAt" type="datetime-local" min={now} value={formatDatetime(allocation.openAt)} /></td>
             <td><input name="closeAt" type="datetime-local" min={now} value={formatDatetime(allocation.closeAt)} /></td>
@@ -56,7 +58,7 @@ const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
 
     return <tr>
         <form method="POST" action={url}>
-            <td>{allocation.group.name}</td>
+            <td><a href={urlBuilder.absolute(`/admin/group/${allocation.groupId}`)}>{allocation.group.name}</a></td>
             <td><textarea name="note" defaultValue={allocation.note} /></td>
             <td>{allocation.creator.name}</td>
             <td><input type="submit" value="Save" /></td>

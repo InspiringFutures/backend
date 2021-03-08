@@ -4,10 +4,11 @@ import { useUrlBuilder, wrap } from "../../wrapper";
 import { Client, ClientStatus as CS } from '../../../model/client.model';
 import { AccessLevel } from "../../../model/accessLevels";
 import { AdminManagement, PermissionExplanation } from '../../util/permissions';
-
+import { SurveyAllocation } from '../../../model/surveyAllocation.model';
 
 interface Props {
     group: Group & {permission: AccessLevel};
+    allocations: SurveyAllocation[];
 }
 
 const ClientRow = ({client, editable, clientURL}: {client: Client; editable: boolean, clientURL: string}) => {
@@ -43,7 +44,15 @@ const ClientRow = ({client, editable, clientURL}: {client: Client; editable: boo
     </tr>;
 };
 
-const GroupView = wrap(({group}: Props) => {
+function formatDatetime(date: Date) {
+    if (date === null) {
+        return "Anytime";
+    } else {
+        return date.toISOString().substr(0, 4+3+3+3+3).replace("T", " ");
+    }
+}
+
+const GroupView = wrap(({group, allocations}: Props) => {
     const urlBuilder = useUrlBuilder();
     const owner = group.permission === AccessLevel.owner;
     const editable = group.permission !== AccessLevel.view;
@@ -58,6 +67,13 @@ const GroupView = wrap(({group}: Props) => {
 
     const clientURL = (client: Client) => {
         return urlBuilder.build(`client/${client.id}`);
+    }
+
+    const oneoffAllocations = allocations.filter(a => a.type === 'oneoff');
+    const initialAllocation = allocations.find(a => a.type === 'initial');
+
+    function surveyLink(allocation: SurveyAllocation) {
+        return <a href={urlBuilder.absolute(`/survey/${allocation.survey.id}`)}>{allocation.survey.name}</a>;
     }
 
     return (<body>
@@ -85,6 +101,22 @@ const GroupView = wrap(({group}: Props) => {
         <br />
         <input type="submit" value="Add Participants" />
     </form>}
+    <h2>Surveys allocated to this group</h2>
+    {oneoffAllocations.length > 0 ? <table>
+        <tr><th>Survey</th><th>Notes</th><th>Opens at</th><th>Closes at</th><th>Allocated by</th></tr>
+        {oneoffAllocations.map(allocation => <tr>
+            <td>{surveyLink(allocation)}</td>
+            <td>{allocation.note}</td>
+            <td>{formatDatetime(allocation.openAt)}</td>
+            <td>{formatDatetime(allocation.closeAt)}</td>
+            <td>{allocation.creator.name}</td>
+        </tr>)}
+        <tr>
+        </tr>
+    </table> : <p>No one-off surveys.</p>}
+    {initialAllocation ? <>
+      <p>Initial registration survey: {surveyLink(initialAllocation)}</p>
+    </> : <p>No initial registration survey.</p>}
     <h2>Researchers</h2>
     <AdminManagement on={group} permissionName={"GroupPermission"} permissionExplanation={permissionExplanation} />
     </body>)
