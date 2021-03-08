@@ -13,18 +13,9 @@ function nameForPermission(level: AccessLevel) {
     }
 }
 
-function permissionExplanation(level: AccessLevel) {
-    switch (level) {
-        case AccessLevel.view:
-            return '(can only view participant answers)';
-        case AccessLevel.edit:
-            return '(can change participants)';
-        case AccessLevel.owner:
-            return '(can change participants and researchers)';
-    }
-}
+export type PermissionExplanation = (level: AccessLevel) => (string);
 
-export function PermissionSelector({level}: { level: AccessLevel }) {
+function PermissionSelector({level, permissionExplanation}: { level: AccessLevel, permissionExplanation: PermissionExplanation }) {
     return <label>Permission: <select name="permission">
         {AccessLevels.map(l => (
             <option key={l} selected={level === l}
@@ -41,9 +32,10 @@ type AdminRowProps<P extends string> = {
     admin: Admin<P>
     editable: boolean;
     permissionName: P;
+    permissionExplanation: PermissionExplanation;
 };
 
-export const AdminRow = function<P extends string>({admin, editable, permissionName}: AdminRowProps<P>) {
+const AdminRow = function<P extends string>({admin, editable, permissionName, permissionExplanation}: AdminRowProps<P>) {
     const urlBuilder = useUrlBuilder();
     return <li>
         {admin.name || `${admin.email} (not logged in yet)`}{' – '}
@@ -52,7 +44,7 @@ export const AdminRow = function<P extends string>({admin, editable, permissionN
                 <form style={{display: "inline"}} method="POST"
                       action={urlBuilder.build('admins')}>
                     <input type="hidden" name="email" value={admin.email} />
-                    <PermissionSelector level={admin[permissionName].level}/>
+                    <PermissionSelector level={admin[permissionName].level} permissionExplanation={permissionExplanation}/>
                     <input type="submit" value="Update"/>
                 </form>
                 <form style={{display: "inline"}} method="POST"
@@ -67,18 +59,19 @@ export const AdminRow = function<P extends string>({admin, editable, permissionN
 type AdminManagementProps<P extends string> = {
     on: { permission: AccessLevel; admins: Admin<P>[] };
     permissionName: P;
+    permissionExplanation: PermissionExplanation;
 };
 
-export function AdminManagement<P extends string>({on, permissionName}: AdminManagementProps<P>) {
+export function AdminManagement<P extends string>({on, permissionName, permissionExplanation}: AdminManagementProps<P>) {
     const urlBuilder = useUrlBuilder();
 
     const owner = on.permission === AccessLevel.owner;
     return <>
         <ul>{on.admins.map(admin => <AdminRow key={admin.id} admin={admin} editable={owner}
-                                              permissionName={permissionName}/>)}</ul>
+                                              permissionName={permissionName} permissionExplanation={permissionExplanation} />)}</ul>
         {owner && <form method="POST" action={urlBuilder.build('admins')}>
             <label>Email: <input name="email" placeholder="Email address"/></label><br/>
-            <PermissionSelector level={AccessLevel.owner}/>
+            <PermissionSelector level={AccessLevel.owner} permissionExplanation={permissionExplanation} />
             <input type="submit" value="Add"/>
         </form>}
     </>;

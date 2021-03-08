@@ -2,8 +2,8 @@ import * as React from 'react'
 import { Group } from "../../../model/group.model";
 import { useUrlBuilder, wrap } from "../../wrapper";
 import { Client, ClientStatus as CS } from '../../../model/client.model';
-import { AccessLevel, AccessLevels } from "../../../model/accessLevels";
-import { AdminManagement, AdminRow, PermissionSelector } from "../../util/permissions";
+import { AccessLevel } from "../../../model/accessLevels";
+import { AdminManagement, PermissionExplanation } from '../../util/permissions';
 
 
 interface Props {
@@ -86,8 +86,19 @@ const GroupView = wrap(({group}: Props) => {
         <input type="submit" value="Add Participants" />
     </form>}
     <h2>Researchers</h2>
-    <AdminManagement on={group} permissionName={"GroupPermission"} />
+    <AdminManagement on={group} permissionName={"GroupPermission"} permissionExplanation={permissionExplanation} />
     </body>)
 });
 
 export default GroupView;
+
+const permissionExplanation: PermissionExplanation = (level: AccessLevel) => {
+    switch (level) {
+        case AccessLevel.view:
+            return '(can only view participant answers)';
+        case AccessLevel.edit:
+            return '(can change participants)';
+        case AccessLevel.owner:
+            return '(can change participants and researchers)';
+    }
+};

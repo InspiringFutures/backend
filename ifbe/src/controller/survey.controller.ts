@@ -1,6 +1,6 @@
 import {
     BadRequestException,
-    Body, Delete,
+    Body,
     Get,
     Injectable,
     Param,
@@ -23,9 +23,8 @@ import { Group } from '../model/group.model';
 import { GroupService } from '../service/group.service';
 import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
 
-function isSet(value: string | null | undefined): string | null {
-    if (value && value !== "") return value;
-    return null;
+function parseDateOrNull(openAt) {
+    return openAt && openAt !== '' ? new Date(openAt + ':00Z') : null;
 }
 
 @Controller('survey')
@@ -68,7 +67,7 @@ export class SurveyController {
     async view(@Param('id') surveyId) {
         const user = this.userService.currentUser()!;
         const survey = await this.hasSurveyAccess(surveyId, AccessLevel.view);
-        const allocations = await survey.$get('allocations', {include: [Admin, Group]});
+        const allocations = await survey.$get('allocations', {include: [Admin, Group], order: ['groupId', ['openAt', 'asc NULLS FIRST'], 'id']});
         const groups = await this.groupService.groupsForUser(user, AccessLevel.edit);
         return {
             survey: {
@@ -136,8 +135,8 @@ export class SurveyController {
             openAt = null;
             closeAt = null;
         } else if (type === 'oneoff') {
-            openAt = isSet(openAt) ?? new Date(openAt + ":00Z");
-            closeAt = isSet(closeAt) ?? new Date(closeAt + ":00Z");
+            openAt = parseDateOrNull(openAt);
+            closeAt = parseDateOrNull(closeAt);
         } else {
             throw new BadRequestException("Unknown allocation type");
         }
@@ -150,6 +149,35 @@ export class SurveyController {
         throw redirect('/survey/' + surveyId);
     }
 
+    @Post(':id/allocation/:allocationId')
+    @NeedsAdmin
+    async editAllocation(@Param('id', ParseIntPipe) surveyId: number,
+                         @Param('allocationId', ParseIntPipe) allocationId:  number,
+                         @Body('openAt') openAt,
+                         @Body('closeAt') closeAt,
+                         @Body('note') note: string) {
+        const admin = this.userService.currentUser()!;
+
+        const allocation = await this.surveyAllocationModel.findByPk(allocationId);
+        if (allocation === null) {
+            throw new BadRequestException("No such allocation");
+        }
+        if (allocation.surveyId !== surveyId) {
+            throw new BadRequestException("Non-matching survey ID");
+        }
+        await this.hasSurveyAccess(allocation.surveyId, AccessLevel.view);
+        await this.hasGroupAccess(allocation.groupId, AccessLevel.edit);
+
+        allocation.note = note;
+        if (allocation.type === 'oneoff') {
+            allocation.openAt = parseDateOrNull(openAt);
+            allocation.closeAt = parseDateOrNull(closeAt);
+        }
+
+        await allocation.save();
+        throw redirect('/survey/' + surveyId);
+    }
+
     @Post(':id/allocation/:allocationId/delete')
     @NeedsAdmin
     async deleteAllocation(@Param('id', ParseIntPipe) surveyId: number, @Param('allocationId', ParseIntPipe) allocationId: number) {
@@ -159,7 +187,7 @@ export class SurveyController {
         if (allocation.surveyId !== surveyId) {
             throw new BadRequestException("Non-matching survey ID");
         }
-        await this.hasGroupAccess(allocation.surveyId, AccessLevel.edit);
+        await this.hasSurveyAccess(allocation.surveyId, AccessLevel.view);
         await this.hasGroupAccess(allocation.groupId, AccessLevel.edit);
 
         await allocation.destroy();

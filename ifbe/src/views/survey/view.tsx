@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Survey } from "../../model/survey.model";
 import { useUrlBuilder, wrap } from "../wrapper";
 import { AccessLevel } from "../../model/accessLevels";
-import { AdminManagement } from "../util/permissions";
+import { AdminManagement, PermissionExplanation } from '../util/permissions';
 import { SurveyAllocation } from '../../model/surveyAllocation.model';
 import { Group } from '../../model/group.model';
 import { Admin } from '../../model/admin.model';
@@ -23,19 +23,23 @@ function formatDatetime(date: Date|null) {
     return isoString.substr(0, isoString.length - 8); // Remove :00.000Z seconds, milliseconds, and Zulu timezone indicator
 }
 
+let lastAllocation = null;
 const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
     const urlBuilder = useUrlBuilder();
 
     const now = formatDatetime(new Date());
     const url = urlBuilder.build('allocation/' + allocation.id);
-    return <tr>
+    const isGroupRepeat = lastAllocation !== null && lastAllocation.groupId === allocation.groupId;
+    const isNewGroupHeader = lastAllocation !== null && !isGroupRepeat;
+    lastAllocation = allocation;
+    const row = <tr>
         <form method="POST" action={url}>
-            <td>{allocation.group.name}</td>
+            <td>{isGroupRepeat ? "" : allocation.group.name}</td>
             <td><textarea name="note" defaultValue={allocation.note} /></td>
             <td><input name="openAt" type="datetime-local" min={now} value={formatDatetime(allocation.openAt)} /></td>
             <td><input name="closeAt" type="datetime-local" min={now} value={formatDatetime(allocation.closeAt)} /></td>
             <td>{allocation.creator.name}</td>
-            <td><input type="submit" value="Update" /></td>
+            <td><input type="submit" value="Save" /></td>
         </form>
         <td>
             <form method="POST" action={url + "/delete"}>
@@ -43,6 +47,7 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
             </form>
         </td>
     </tr>;
+    return isNewGroupHeader ? <><tr><td colSpan={7}><hr /></td></tr>{row}</> : row;
 };
 
 const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
@@ -54,7 +59,7 @@ const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
             <td>{allocation.group.name}</td>
             <td><textarea name="note" defaultValue={allocation.note} /></td>
             <td>{allocation.creator.name}</td>
-            <td><input type="submit" value="Update" /></td>
+            <td><input type="submit" value="Save" /></td>
         </form>
         <td>
             <form method="POST" action={url + "/delete"}>
@@ -67,7 +72,8 @@ const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
 const SurveyView = wrap(({groups, survey}: Props) => {
     const urlBuilder = useUrlBuilder();
     const owner = survey.permission === AccessLevel.owner;
-    const editable = survey.permission !== AccessLevel.view;
+    const editable = survey.permission !== AccessLevel.view && survey.allocations.length === 0;
+    const locked = survey.permission !== AccessLevel.view && survey.allocations.length > 0;
 
     const now = formatDatetime(new Date());
     const url = urlBuilder.build('allocation');
@@ -77,6 +83,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
     {owner && <p>You are an owner of this survey.</p>}
     <p>Last modified by {survey.updater.name} at {survey.updatedAt.toLocaleString()}.</p>
     {editable && <p><a href={urlBuilder.build('edit')}>Edit survey</a></p>}
+    {locked && <p><em>This survey has been allocated and therefore can no longer be edited.</em></p>}
 
     <h2>Allocated to the following groups</h2>
     <table>
@@ -85,7 +92,8 @@ const SurveyView = wrap(({groups, survey}: Props) => {
         {survey.allocations.filter(a => a.type !== 'initial').map(allocation =>
             <TimedAllocationRow key={allocation.id} allocation={allocation} />
         )}
-        <tr><th colSpan={7}>Allocate to another group</th></tr>
+        <tr><th colSpan={7}><hr /></th></tr>
+        <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={5}>&nbsp;</th></tr>
         <tr>
             <form method="POST" action={url}>
                 <input type="hidden" name="type" value="oneoff" />
@@ -101,14 +109,15 @@ const SurveyView = wrap(({groups, survey}: Props) => {
         </tbody>
     </table>
 
-    <h2>Sign up survey for following groups</h2>
+    <h2>Allocated as required initial sign up survey for following groups</h2>
     <table>
         <tbody>
         <tr><th>Group</th><th>Notes</th><th>Allocated by</th><th colSpan={2}>&nbsp;</th></tr>
         {survey.allocations.filter(a => a.type === 'initial').map(allocation =>
             <InitialAllocationRow key={allocation.id} allocation={allocation} />
         )}
-        <tr><th colSpan={5}>Allocate to another group</th></tr>
+        <tr><th colSpan={5}><hr /></th></tr>
+        <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={3}>&nbsp;</th></tr>
         <tr>
             <form method="POST" action={url}>
                 <input type="hidden" name="type" value="initial" />
@@ -122,9 +131,20 @@ const SurveyView = wrap(({groups, survey}: Props) => {
         </tbody>
     </table>
 
-    <h2>Other survey users</h2>
-    <AdminManagement on={survey} permissionName="SurveyPermission" />
+    <h2>Other survey admins</h2>
+    <AdminManagement on={survey} permissionName="SurveyPermission" permissionExplanation={permissionExplanation} />
     </body>)
 });
 
 export default SurveyView;
+
+const permissionExplanation: PermissionExplanation = (level: AccessLevel) => {
+    switch (level) {
+        case AccessLevel.view:
+            return '(can view and allocate this survey)';
+        case AccessLevel.edit:
+            return '(can edit and allocate this survey)';
+        case AccessLevel.owner:
+            return '(can change survey and add other admins)';
+    }
+};
