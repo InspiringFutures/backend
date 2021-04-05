@@ -76,8 +76,13 @@ const GroupView = wrap(({group, allocations}: Props) => {
         return <a href={urlBuilder.absolute(`/survey/${allocation.survey.id}`)}>{allocation.survey.name}</a>;
     }
 
+    function surveyResultsLink(allocation: SurveyAllocation) {
+        return <a href={urlBuilder.absolute(`/survey/${allocation.id}/results`)}>View results</a>;
+    }
+
     return (<body>
     <h1>Group: {group.name}</h1>
+    <p><a href="/admin">Back to admin area</a></p>
     <p>Code: {group.code}</p>
     <p>Group registration QR code<br /><img src={urlBuilder.build('/qr', {url: groupCodeURL})} /><br /><a href={groupCodeURL}>{groupCodeURL}</a></p>
     {owner && <p>You are an owner of this group.</p>}
@@ -103,19 +108,20 @@ const GroupView = wrap(({group, allocations}: Props) => {
     </form>}
     <h2>Surveys allocated to this group</h2>
     {oneoffAllocations.length > 0 ? <table>
-        <tr><th>Survey</th><th>Notes</th><th>Opens at</th><th>Closes at</th><th>Allocated by</th></tr>
+        <tr><th>Survey</th><th>Notes</th><th>Opens at</th><th>Closes at</th><th>Allocated by</th><th>&nbsp;</th></tr>
         {oneoffAllocations.map(allocation => <tr>
             <td>{surveyLink(allocation)}</td>
             <td>{allocation.note}</td>
             <td>{formatDatetime(allocation.openAt)}</td>
             <td>{formatDatetime(allocation.closeAt)}</td>
             <td>{allocation.creator.name}</td>
+            <td>{surveyResultsLink(allocation)}</td>
         </tr>)}
         <tr>
         </tr>
     </table> : <p>No one-off surveys.</p>}
     {initialAllocation ? <>
-      <p>Initial registration survey: {surveyLink(initialAllocation)}</p>
+      <p>Initial registration survey: {surveyLink(initialAllocation)} — {surveyResultsLink(initialAllocation)}</p>
     </> : <p>No initial registration survey.</p>}
     <h2>Researchers</h2>
     <AdminManagement on={group} permissionName={"GroupPermission"} permissionExplanation={permissionExplanation} />

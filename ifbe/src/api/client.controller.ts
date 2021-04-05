@@ -116,8 +116,8 @@ export class ClientController {
         }
     }
 
-    @Post(':id/journal')
-    async addJournal(@Param('id') clientId: number, @Body() journal: JournalContent, @Headers('X-Token') token: string) {
+    @Post(':clientId/journal')
+    async addJournal(@Param('clientId') clientId: number, @Body() journal: JournalContent, @Headers('X-Token') token: string) {
         const client = await this.authenticateClient(clientId, token);
         return await this.journalService.add(client, journal);
     }
@@ -129,6 +129,64 @@ export class ClientController {
         const journal = await this.journalService.get(client, journalId);
 
         return this.journalService.updateEntry(journal, url, upload);
+    }
+
+    @Get(':clientId/incompleteSurveys')
+    async getIncompleteSurveys(@Param('clientId') clientId: number, @Headers('X-Token') token: string) {
+        const client = await this.authenticateClient(clientId, token);
+        const surveys = await this.groupService.getOneOffSurveysForGroup(client.groupId);
+
+        // Filter active surveys
+        const now = new Date();
+        const activeSurveys = surveys.filter(allocation => {
+            if (allocation.closeAt && allocation.closeAt < now) {
+                return false;
+            }
+            if (allocation.openAt && allocation.openAt > now) {
+                return false;
+            }
+            return true;
+        });
+
+        // Create answers for those that are missing
+        const allocationIds = activeSurveys.map(allocation => allocation.id);
+        const answers = await this.answerModel.findAll({where: {
+            surveyAllocationId: allocationIds,
+            clientId: client.id,
+        }});
+        const answerMap = {};
+        answers.forEach(answer => {
+            answerMap[answer.surveyAllocationId] = answer;
+        });
+
+        const toCreate = allocationIds.filter(id => !answerMap[id]);
+
+        if (toCreate.length > 0) {
+            const newAnswers = await this.answerModel.bulkCreate(toCreate.map(allocationId => ({
+                surveyAllocationId: allocationId,
+                clientId: client.id,
+            })), {
+                returning: true,
+            });
+            newAnswers.forEach(answer => {
+                answerMap[answer.surveyAllocationId] = answer;
+            });
+        }
+
+        const results = [];
+        activeSurveys.forEach(allocation => {
+            const answer = answerMap[allocation.id];
+            if (answer.answer && answer.answer.complete) {
+                return;
+            }
+            results.push({
+                answerId: answer.id,
+                closeAt: allocation.closeAt,
+                content: allocation.survey.content.content,
+            });
+        });
+
+        return results;
     }
 
     @Post(':clientId/answer/:answerId')

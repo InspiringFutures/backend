@@ -194,6 +194,31 @@ export class SurveyController {
         throw redirect('/survey/' + surveyId);
     }
 
+    @Get('(:id/allocation/)?:allocationId/results')
+    @NeedsAdmin
+    @Page('viewResults')
+    async viewResults(@Param('allocationId', ParseIntPipe) allocationId:  number) {
+        const admin = this.userService.currentUser()!;
+
+        const allocation = await this.surveyAllocationModel.findByPk(allocationId, {include: ["survey", "answers"]});
+        if (allocation === null) {
+            throw new BadRequestException("No such allocation");
+        }
+        await this.hasSurveyAccess(allocation.surveyId, AccessLevel.view);
+        const group = await this.hasGroupAccess(allocation.groupId, AccessLevel.view);
+
+        // Get group members
+        const clients = await group.$get('clients');
+
+        // Render
+        return {
+            group,
+            clients,
+            allocation,
+            //answers: allocation.answers,
+        };
+    }
+
     private async hasSurveyAccess(surveyId: number, neededLevel: AccessLevel) {
         const admin = this.userService.currentUser()!;
         const survey = await this.surveyService.surveyForUser(admin, surveyId);

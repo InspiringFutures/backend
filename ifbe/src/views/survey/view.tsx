@@ -48,6 +48,9 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
                 <input type="submit" value="Delete" />
             </form>
         </td>
+        <td>
+            <a href={url + "/results"}>View results</a>
+        </td>
     </tr>;
     return isNewGroupHeader ? <><tr><td colSpan={7}><hr /></td></tr>{row}</> : row;
 };
@@ -68,6 +71,9 @@ const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
                 <input type="submit" value="Delete" />
             </form>
         </td>
+        <td>
+            <a href={url + "/results"}>View results</a>
+        </td>
     </tr>;
 };
 
@@ -82,6 +88,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
 
     return (<body>
     <h1>Survey: {survey.name}</h1>
+    <p><a href="/admin">Back to admin area</a></p>
     {owner && <p>You are an owner of this survey.</p>}
     <p>Last modified by {survey.updater.name} at {survey.updatedAt.toLocaleString()}.</p>
     {editable && <p><a href={urlBuilder.build('edit')}>Edit survey</a></p>}
@@ -90,12 +97,12 @@ const SurveyView = wrap(({groups, survey}: Props) => {
     <h2>Allocated to the following groups</h2>
     <table>
         <tbody>
-        <tr><th>Group</th><th>Notes</th><th>Opens at</th><th>Closes at</th><th>Allocated by</th><th colSpan={2}>&nbsp;</th></tr>
+        <tr><th>Group</th><th>Notes</th><th>Opens at</th><th>Closes at</th><th>Allocated by</th><th colSpan={3}>&nbsp;</th></tr>
         {survey.allocations.filter(a => a.type !== 'initial').map(allocation =>
             <TimedAllocationRow key={allocation.id} allocation={allocation} />
         )}
-        <tr><th colSpan={7}><hr /></th></tr>
-        <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={5}>&nbsp;</th></tr>
+        <tr><th colSpan={8}><hr /></th></tr>
+        <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={6}>&nbsp;</th></tr>
         <tr>
             <form method="POST" action={url}>
                 <input type="hidden" name="type" value="oneoff" />
@@ -105,7 +112,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
                 <td><textarea name="note" /></td>
                 <td><input name="openAt" type="datetime-local" min={now}  /></td>
                 <td><input name="closeAt" type="datetime-local" min={now} /></td>
-                <td colSpan={2}><input type="submit" value="Add" /></td>
+                <td colSpan={3}><input type="submit" value="Add" /></td>
             </form>
         </tr>
         </tbody>
@@ -114,12 +121,12 @@ const SurveyView = wrap(({groups, survey}: Props) => {
     <h2>Allocated as required initial sign up survey for following groups</h2>
     <table>
         <tbody>
-        <tr><th>Group</th><th>Notes</th><th>Allocated by</th><th colSpan={2}>&nbsp;</th></tr>
+        <tr><th>Group</th><th>Notes</th><th>Allocated by</th><th colSpan={3}>&nbsp;</th></tr>
         {survey.allocations.filter(a => a.type === 'initial').map(allocation =>
             <InitialAllocationRow key={allocation.id} allocation={allocation} />
         )}
-        <tr><th colSpan={5}><hr /></th></tr>
-        <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={3}>&nbsp;</th></tr>
+        <tr><th colSpan={6}><hr /></th></tr>
+        <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={4}>&nbsp;</th></tr>
         <tr>
             <form method="POST" action={url}>
                 <input type="hidden" name="type" value="initial" />
@@ -127,7 +134,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
                     {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
                 </select></td>
                 <td><textarea name="note" /></td>
-                <td colSpan={2}><input type="submit" value="Add" /></td>
+                <td colSpan={3}><input type="submit" value="Add" /></td>
             </form>
         </tr>
         </tbody>

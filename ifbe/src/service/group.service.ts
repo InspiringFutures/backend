@@ -8,6 +8,7 @@ import { GroupPermission } from "../model/groupPermission.model";
 import { Client, ClientStatus } from '../model/client.model';
 import { getOrElse } from "../util/functional";
 import { AccessLevel, filterAccessLevel } from '../model/accessLevels';
+import { SurveyAllocation } from '../model/surveyAllocation.model';
 
 type GroupWithAccessLevel = Group & { permission: AccessLevel };
 
@@ -16,6 +17,7 @@ export class GroupService {
                 @InjectModel(Client) private clientModel: typeof Client,
                 @InjectModel(Admin) private adminModel: typeof Admin,
                 @InjectModel(GroupPermission) private groupPermissionModel: typeof GroupPermission,
+                @InjectModel(SurveyAllocation) private surveyAllocationModel: typeof SurveyAllocation,
     ) {}
 
     async groupFromCode(code: string) {
@@ -112,4 +114,7 @@ export class GroupService {
         return client;
     }
 
+    async getOneOffSurveysForGroup(groupId: number) {
+        return this.surveyAllocationModel.findAll({where: {groupId, type: 'oneoff'}, include: ["survey"]});
+    }
 }

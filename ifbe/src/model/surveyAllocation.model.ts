@@ -3,7 +3,7 @@ import {
     AutoIncrement,
     BelongsTo,
     Column,
-    ForeignKey,
+    ForeignKey, HasMany,
     Model,
     PrimaryKey,
     Table,
@@ -13,6 +13,7 @@ import { Admin } from "./admin.model";
 import { Group } from "./group.model";
 import { Survey } from './survey.model';
 import { DataTypes } from 'sequelize';
+import { Answer } from './answer.model';
 
 export type SurveyAllocationType = 'oneoff' | 'initial';
 
@@ -61,4 +62,7 @@ export class SurveyAllocation extends Model<SurveyAllocation> {
 
     @BelongsTo(() => Admin)
     creator: Admin;
+
+    @HasMany(() => Answer)
+    answers: Answer[];
 }
