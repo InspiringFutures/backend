@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/sequelize";
 
 import { Group } from "../model/group.model";
 
-export function extractGroupJoinDTO(group: Group, request) {
+export function extractGroupJoinDTO(group: Group) {
     group.setApiURLfromRequestIfNotSet();
     return { name: group.name, apiURL: group.apiURL, code: group.code };
 }
@@ -22,6 +22,6 @@ export class GroupController {
         if (!group) {
             throw new HttpException('Unknown group code', HttpStatus.NOT_FOUND);
         }
-        return extractGroupJoinDTO(group, request);
+        return extractGroupJoinDTO(group);
     }
 }

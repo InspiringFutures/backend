@@ -1,4 +1,4 @@
-import { BelongsToMany, Column, HasMany, Model, Table } from 'sequelize-typescript';
+import { BelongsToMany, Column, HasMany, HasOne, Model, Table } from 'sequelize-typescript';
 
 import { Admin } from "./admin.model";
 import { Client } from "./client.model";
@@ -40,4 +40,12 @@ export class Group extends Model<Group> {
 
     @HasMany(() => SurveyAllocation)
     allocations: SurveyAllocation[];
+
+    @HasOne(() => SurveyAllocation, {
+        scope: {
+            type: 'initial',
+        },
+    })
+    initialSurvey: SurveyAllocation | null;
+
 }

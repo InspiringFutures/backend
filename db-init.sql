@@ -126,3 +126,16 @@ create table "SurveyAllocations" (id serial primary key,
 );
 
 CREATE UNIQUE INDEX ON "SurveyAllocations" ("groupId") WHERE "type" = 'initial';
+
+CREATE TABLE "Answers" (
+    id serial primary key,
+    "clientId" integer not null,
+    foreign key ("clientId") references "Clients" (id),
+    "surveyAllocationId" integer not null,
+    foreign key ("surveyAllocationId") references "SurveyAllocations" (id),
+    answer json DEFAULT '{"complete": false, "answers": {}}'::json NOT NULL,
+    "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+    "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE UNIQUE INDEX ON "Answers" ("clientId", "surveyAllocationId");

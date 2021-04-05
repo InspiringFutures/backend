@@ -19,14 +19,9 @@ import { ClientService } from '../service/client.service';
 import { GroupService } from '../service/group.service';
 import { Client } from '../model/client.model';
 import { extractGroupJoinDTO } from './group.controller';
-
-function extractNewClientDTO(client: Client) {
-    return {
-        id: client.id,
-        participantID: client.participantID,
-        token: client.token,
-    };
-}
+import { Group } from '../model/group.model';
+import { InjectModel } from '@nestjs/sequelize';
+import { Answer } from '../model/answer.model';
 
 function extractCheckClientDTO(client: Client) {
     return {
@@ -41,10 +36,12 @@ export class ClientController {
         private journalService: JournalService,
         private clientService: ClientService,
         private groupService: GroupService,
-    ) {}
+        @InjectModel(Answer)
+        private answerModel: typeof Answer,
+) {}
 
     @Post('check')
-    async check(@Body() clientDto: RegisterClientDto, @Req() request) {
+    async check(@Body() clientDto: RegisterClientDto) {
         const group = await this.groupService.groupFromCode(clientDto.groupCode);
         if (!group) {
             throw new NotFoundException(clientDto.groupCode, 'Unknown group code');
@@ -54,18 +51,17 @@ export class ClientController {
     }
 
     @Post('')
-    async register(@Body() clientDto: RegisterClientDto, @Req() request) {
-        console.log("Register", clientDto);
+    async register(@Body() clientDto: RegisterClientDto) {
         const group = await this.groupService.groupFromCode(clientDto.groupCode);
         if (!group) {
             throw new NotFoundException(clientDto.groupCode, 'Unknown group code');
         }
         const client = await this.clientService.register(group, clientDto.participantID);
-        return extractNewClientDTO(client);
+        return this.extractNewClientDTO(client, group);
     }
 
     @Get('reset/token/:token')
-    async viewResetToken(@Param('token') token: string, @Headers('X-Requested-With') requestedWith: string, @Res() res, @Req() req) {
+    async viewResetToken(@Param('token') token: string, @Headers('X-Requested-With') requestedWith: string, @Res() res) {
         if (requestedWith && requestedWith.startsWith('Inspiring Futures App')) {
             // Process the reset
             const client = await this.clientService.viewResetToken(token);
@@ -74,7 +70,7 @@ export class ClientController {
                 res.json({
                     client: extractCheckClientDTO(client),
                     resetToken: token,
-                    group: extractGroupJoinDTO(group, req),
+                    group: extractGroupJoinDTO(group),
                 });
             } else {
                 res.status(400).json({
@@ -88,14 +84,14 @@ export class ClientController {
     }
 
     @Post('reset/token/:token')
-    async consumeResetToken(@Param('token') token: string, @Res() res, @Req() req) {
+    async consumeResetToken(@Param('token') token: string, @Res() res) {
         // Process the reset
         const client = await this.clientService.processResetToken(token);
         if (client) {
             const group = await client.$get('group');
             res.json({
-                client: extractNewClientDTO(client),
-                group: extractGroupJoinDTO(group, req),
+                client: await this.extractNewClientDTO(client, group),
+                group: extractGroupJoinDTO(group),
             });
         } else {
             res.status(400).json({
@@ -106,13 +102,13 @@ export class ClientController {
 
     // Regexp has to be written this way (instead of just .*) to avoid some kind of filtering inside Express
     @Get('registration/token/:groupCode/:participantID([^]+)')
-    async viewRegistrationToken(@Param('groupCode') groupCode: string, @Param('participantID') participantID: string, @Headers('X-Requested-With') requestedWith: string, @Res() res, @Req() req) {
+    async viewRegistrationToken(@Param('groupCode') groupCode: string, @Param('participantID') participantID: string, @Headers('X-Requested-With') requestedWith: string, @Res() res) {
         if (requestedWith && requestedWith.startsWith('Inspiring Futures App')) {
             // Process the reset
             const {client, group} = await this.clientService.extractRegistrationToken(groupCode, participantID);
             res.json({
                 client: extractCheckClientDTO(client),
-                group: extractGroupJoinDTO(group, req),
+                group: extractGroupJoinDTO(group),
             });
         } else {
             // Tell the user they need to scan the token on their phone.
@@ -135,6 +131,25 @@ export class ClientController {
         return this.journalService.updateEntry(journal, url, upload);
     }
 
+    @Post(':clientId/answer/:answerId')
+    async answerSurvey(@Param('clientId') clientId: number, @Param('answerId') answerId: number, @Headers('X-Token') token: string, @Body() answers: any, @Res() res) {
+        const client = await this.authenticateClient(clientId, token);
+        const answer = await this.answerModel.findByPk(answerId);
+        if (answer.clientId !== client.id) {
+            throw new ForbiddenException("Answer doesn't belong to this client.");
+        }
+        if (answer.answer.complete === true) {
+            throw new ForbiddenException("Already answered this survey.");
+        }
+        answer.answer = {
+            complete: true,
+            answers,
+        };
+        await answer.save();
+        res.sendStatus(201);
+    }
+
+
     private async authenticateClient(clientId: number, token: string) {
         if (token === '' || !token) {
             throw new ForbiddenException("Token is missing.");
@@ -146,5 +161,24 @@ export class ClientController {
             throw new ForbiddenException("Token is incorrect.");
         }
         return client;
+    }
+
+    private async extractNewClientDTO(client: Client, group: Group) {
+        const initialSurveyAllocation = await group.$get('initialSurvey', {include: ["survey"]});
+        let answer: Answer | undefined;
+
+        if (initialSurveyAllocation) {
+            [answer] = await this.answerModel.findOrCreate({where: {clientId: client.id, surveyAllocationId: initialSurveyAllocation.id}});
+        }
+
+        return {
+            id: client.id,
+            participantID: client.participantID,
+            token: client.token,
+            initialSurveyToAnswer: initialSurveyAllocation ? {
+                answerId: answer.id,
+                content: initialSurveyAllocation.survey.content.content,
+            } : undefined,
+        };
     }
 }
