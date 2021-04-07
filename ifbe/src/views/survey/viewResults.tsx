@@ -1,13 +1,8 @@
 import * as React from 'react'
-import { Survey } from "../../model/survey.model";
-import { useUrlBuilder, wrap } from "../wrapper";
-import { AccessLevel } from "../../model/accessLevels";
-import { AdminManagement, PermissionExplanation } from '../util/permissions';
+import { wrap } from "../wrapper";
 import { SurveyAllocation } from '../../model/surveyAllocation.model';
 import { Group } from '../../model/group.model';
-import { Admin } from '../../model/admin.model';
 import { Client } from '../../model/client.model';
-import { Answer } from '../../model/answer.model';
 import { SurveyQuestion } from '../../model/SurveyContent';
 
 
@@ -22,12 +17,13 @@ function formatDatetime(date: Date|null) {
         return null;
     }
     const isoString = date.toISOString();
-    return isoString.substr(0, isoString.length - 8); // Remove :00.000Z seconds, milliseconds, and Zulu timezone indicator
+    // Remove .000Z milliseconds, and Zulu timezone indicator, replace T with space
+    return isoString.substr(0, isoString.length - 5).replace('T', ' ');
 }
 
 function format(answer: any, question: UnpackedQuestion) {
-    if (answer === null) {
-        return <em>?</em>;
+    if (answer == null) {
+        return '';
     }
     switch (question.type) {
         case 'TextQuestion':
@@ -35,12 +31,9 @@ function format(answer: any, question: UnpackedQuestion) {
         case 'ParagraphQuestion':
             return answer;
         case 'ConsentQuestion':
-            return answer ? 'Yes' : 'No';
+            return answer ? 'yes' : 'no';
         case 'ChoiceQuestion':
-            if (answer.value === 'other') {
-                return answer.other;
-            }
-            return question.choices[answer.value];
+            return answer.value === 'other' ? question.choices.length + 1 : answer.value !== -1 ? answer.value + 1 : '';
         case 'CheckboxQuestion':
             const options = question.choices.filter((_v, index) => answer.checks[index]);
             if (answer.otherChecked) {
@@ -60,6 +53,7 @@ type UnpackedQuestion = {
     cols: string[] | null;
     rows: string[] | null;
     choices: string[] | null;
+    allowOther: boolean;
 };
 
 const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
@@ -72,63 +66,79 @@ const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
             title: c.title,
             subQuestions: isGridQuestion ? c.rows : null,
             commentsPrompt: c.commentsPrompt ?? null,
-            colCount: (isGridQuestion ? c.rows.length : 1) + (c.commentsPrompt ? 1 : 0),
+            colCount: (isGridQuestion ? c.rows.length : 1) + (c.commentsPrompt ? 1 : 0) + (c.allowOther ? 1 : 0),
             cols: c.cols ?? null,
             rows: c.rows ?? null,
             choices: c.choices ?? null,
+            allowOther: !!c.allowOther,
        };
     }).filter(notNull => notNull);
 
     const clientMap = {};
     clients.forEach(client => clientMap[client.id] = client);
 
+    const total = questions.reduce((sum, q) => sum + q.colCount, 0);
+
+    const minor = {borderRight: 'solid 1px #ddd'};
+    const major = {borderRight: 'solid 1px #bbb'};
+    const box = {borderBottom: major.borderRight, ...major};
+    const subBox = {borderBottom: minor.borderRight, ...major};
+
     return (<body>
     <h1>Survey results</h1>
     <p><b>Group:</b> {group.name}</p>
     <p><b>Survey:</b> {allocation.survey.name}</p>
-    <table>
+    <table cellSpacing={0} style={{borderCollapse: 'collapse', padding: '4px', borderLeft: box.borderBottom, borderBottom: box.borderBottom}}>
         <thead>
-            <tr>
-                <th rowSpan={2}>Client</th>
+            <tr style={{borderTop: 'solid 1px #bbb'}}>
+                <th rowSpan={2} style={box}>Participant</th>
+                <th rowSpan={2} style={box}>Completed date</th>
                 {questions.map((q) => {
-                    if (q.subQuestions) {
-                        return <th key={q.id} colSpan={q.colCount}>{q.title}</th>;
+                    if (q.colCount > 1) {
+                        return <th key={q.id} colSpan={q.colCount} style={subBox}>{q.title}</th>;
                     }
-                    return <th key={q.id} rowSpan={2}>{q.title}</th>;
+                    return <th key={q.id} rowSpan={2} style={box}>{q.title}</th>;
                 })}
             </tr>
-            <tr>
+            <tr style={box}>
                 {questions.map((q) => {
                     return <React.Fragment key={q.id}>
-                        {q.subQuestions && q.subQuestions.map((sub, index) => <th key={index}>{sub}</th>)}
-                        {q.commentsPrompt && <th key="commentsPrompt">{q.commentsPrompt}</th>}
+                        {q.subQuestions && q.subQuestions.map((sub, index) => <th key={index} style={index === q.colCount - 1 ? major : minor}>{sub}</th>)}
+                        {q.commentsPrompt && <th key="commentsPrompt" style={major}>{q.commentsPrompt}</th>}
+                        {q.allowOther && <th key="choice" style={minor}>Choice</th>}
+                        {q.allowOther && <th key="allowOther" style={major}>Other (choice {q.choices.length + 1})</th>}
                     </React.Fragment>;
                 })}
             </tr>
         </thead>
         <tbody>
-            {allocation.answers.map(answer => {
+            {allocation.answers.map((answer, rowIndex) => {
                 const answerMap = answer.answer.answers;
-                return <tr key={answer.id}>
-                    <td>{clientMap[answer.clientId].participantID}</td>
+                return <tr key={answer.id} style={rowIndex % 2 === 0 ? {backgroundColor: '#f4f4f4'} : undefined}>
+                    <td style={major}>{clientMap[answer.clientId].participantID}</td>
+                    <td style={major}>{answer.answer.complete ? formatDatetime(answer.updatedAt) : ''}</td>
                     {answer.answer.complete ?
                         questions.map((q) => {
                             const answer = answerMap[q.id];
-                            console.log(q, answer);
                             if (q.subQuestions) {
                                 return <React.Fragment key={q.id}>
                                     {q.subQuestions && q.subQuestions.map((sub, index) => {
                                         // FIXME: do CheckboxGridQuestion
                                         const choice = answer?.checks?.[index] ?? null;
-                                        return <td key={index}>{choice === null || choice === -1 ? '?' : choice + 1}</td>;
+                                        return <td key={index} style={index === q.colCount - 1 ? major : minor}>{choice === null || choice === -1 ? '' : choice + 1}</td>;
                                     })}
-                                    {q.commentsPrompt && <td key="otherComments">{answer?.otherComments}</td>}
+                                    {q.commentsPrompt && <td key="otherComments" style={major}>{answer?.otherComments}</td>}
+                                </React.Fragment>;
+                            } else if (q.allowOther) {
+                                return <React.Fragment key={q.id}>
+                                    <td style={minor}>{format(answer, q)}</td>
+                                    <td style={major}>{answer && answer.value === 'other' ? answer.other : ''}</td>
                                 </React.Fragment>;
                             } else {
-                                return <td key={q.id}>{format(answer, q)}</td>;
+                                return <td key={q.id} style={major}>{format(answer, q)}</td>;
                             }
                         })
-                        : <td>Not answered</td>
+                        : <td colSpan={total} style={major}>Not answered</td>
                     }
                 </tr>;
             })}

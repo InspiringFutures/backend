@@ -139,13 +139,8 @@ export class ClientController {
         // Filter active surveys
         const now = new Date();
         const activeSurveys = surveys.filter(allocation => {
-            if (allocation.closeAt && allocation.closeAt < now) {
-                return false;
-            }
-            if (allocation.openAt && allocation.openAt > now) {
-                return false;
-            }
-            return true;
+            return allocation.openAt === null || now >= allocation.openAt;
+
         });
 
         // Create answers for those that are missing

@@ -1,5 +1,5 @@
 export interface Content {
-    readonly type: SurveyContent["type"];
+    readonly type: SurveyContent['type'];
     id: string;
     originId?: string;
     title?: string;
@@ -7,63 +7,71 @@ export interface Content {
 }
 
 export interface SectionHeader extends Content {
-    readonly type: "SectionHeader";
+    readonly type: 'SectionHeader';
 }
 
 export interface TextBlock extends Content {
-    readonly type: "TextBlock";
+    readonly type: 'TextBlock';
 }
 
 export interface Question extends Content {
-    readonly type: SurveyQuestion["type"];
+    readonly type: SurveyQuestion['type'];
     questionNumber?: number;
 }
 
 export interface TextQuestion extends Question {
-    readonly type: "TextQuestion";
+    readonly type: 'TextQuestion';
     placeholder?: string;
 }
 
 export interface YesNoQuestion extends Question {
-    readonly type: "YesNoQuestion";
+    readonly type: 'YesNoQuestion';
 }
 
 export interface ConsentQuestion extends Question {
-    readonly type: "ConsentQuestion";
+    readonly type: 'ConsentQuestion';
 }
 
 export interface ParagraphQuestion extends Question {
-    readonly type: "ParagraphQuestion";
+    readonly type: 'ParagraphQuestion';
     placeholder?: string;
 }
 
 export interface ChoiceQuestion extends Question {
-    readonly type: "ChoiceQuestion";
+    readonly type: 'ChoiceQuestion';
     choices?: string[];
     allowOther?: boolean;
 }
 
 export interface CheckboxQuestion extends Question {
-    readonly type: "CheckboxQuestion";
+    readonly type: 'CheckboxQuestion';
     choices?: string[];
     allowOther?: boolean;
 }
 
 export interface CheckboxGridQuestion extends Question {
-    readonly type: "CheckboxGridQuestion";
+    readonly type: 'CheckboxGridQuestion';
     rows?: string[];
     columns?: string[];
     commentsPrompt?: string;
 }
 
 export interface ChoiceGridQuestion extends Question {
-    readonly type: "ChoiceGridQuestion";
+    readonly type: 'ChoiceGridQuestion';
     rows?: string[];
     columns?: string[];
     commentsPrompt?: string;
 }
 
-export type SurveyQuestion = TextQuestion | YesNoQuestion | ConsentQuestion | ParagraphQuestion | ChoiceQuestion | ChoiceGridQuestion | CheckboxQuestion | CheckboxGridQuestion;
+export type SurveyQuestion =
+    | TextQuestion
+    | YesNoQuestion
+    | ConsentQuestion
+    | ParagraphQuestion
+    | ChoiceQuestion
+    | ChoiceGridQuestion
+    | CheckboxQuestion
+    | CheckboxGridQuestion;
 export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
 
 export function isQuestion(c: Content): c is Question {
