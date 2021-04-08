@@ -123,9 +123,15 @@ const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
                             if (q.subQuestions) {
                                 return <React.Fragment key={q.id}>
                                     {q.subQuestions && q.subQuestions.map((sub, index) => {
-                                        // FIXME: do CheckboxGridQuestion
-                                        const choice = answer?.checks?.[index] ?? null;
-                                        return <td key={index} style={index === q.colCount - 1 ? major : minor}>{choice === null || choice === -1 ? '' : choice + 1}</td>;
+                                        if (q.type === 'ChoiceGridQuestion') {
+                                            const choice = answer?.checks?.[index] ?? null;
+                                            return <td key={index} style={index === q.colCount - 1 ? major : minor}>{choice === null || choice === -1 ? '' : choice + 1}</td>;
+                                        } else if (q.type === 'CheckboxGridQuestion') {
+                                            const choices = answer?.checks?.[index] ?? [];
+                                            return <td key={index} style={index === q.colCount - 1 ? major : minor}>{q.cols.filter((col, index) => choices[index]).join(", ")}</td>;
+                                        } else {
+                                            return <td key={index}>{JSON.stringify({question: q, answer: answer})}</td>;
+                                        }
                                     })}
                                     {q.commentsPrompt && <td key="otherComments" style={major}>{answer?.otherComments}</td>}
                                 </React.Fragment>;
