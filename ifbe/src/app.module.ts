@@ -32,6 +32,11 @@ import { GroupAdminController } from "./controller/groupAdmin.controller";
 import { SurveyAllocation } from './model/surveyAllocation.model';
 import { Answer } from './model/answer.model';
 
+// Fix bug with parsing timestamps from Postgres as non-local time
+require('pg').types.setTypeParser(1114, function(stringValue) {
+    return new Date(stringValue.substring(0, 10) + 'T' + stringValue.substring(11) + 'Z');
+});
+
 const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry, Token, Survey, SurveyPermission, SurveyVersion, SurveyAllocation, Answer];
 
 @Module({

@@ -15,19 +15,18 @@ interface Props {
     survey: Omit<Survey, 'allocations'> & {permission: AccessLevel} & {allocations: Allocation[]};
 }
 
-function formatDatetime(date: Date|null) {
+function formatDate(date: Date|null) {
     if (date === null) {
         return null;
     }
     const isoString = date.toISOString();
-    return isoString.substr(0, isoString.length - 8); // Remove :00.000Z seconds, milliseconds, and Zulu timezone indicator
+    return isoString.substr(0, isoString.length - 14); // Remove T00:00:00.000Z i.e. time including milliseconds and Zulu timezone indicator
 }
 
 let lastAllocation = null;
 const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
     const urlBuilder = useUrlBuilder();
 
-    const now = formatDatetime(new Date());
     const url = urlBuilder.build('allocation/' + allocation.id);
     const isGroupRepeat = lastAllocation !== null && lastAllocation.groupId === allocation.groupId;
     const isNewGroupHeader = lastAllocation !== null && !isGroupRepeat;
@@ -38,8 +37,8 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
                 {isGroupRepeat ? "" : <a href={urlBuilder.absolute(`/admin/group/${allocation.groupId}`)}>{allocation.group.name}</a>}
             </td>
             <td><textarea name="note" defaultValue={allocation.note} /></td>
-            <td><input name="openAt" type="datetime-local" min={now} value={formatDatetime(allocation.openAt)} /></td>
-            <td><input name="closeAt" type="datetime-local" min={now} value={formatDatetime(allocation.closeAt)} /></td>
+            <td><input name="openAt" type="date" value={formatDate(allocation.openAt)} /></td>
+            <td><input name="closeAt" type="date" value={formatDate(allocation.closeAt)} /></td>
             <td>{allocation.creator.name}</td>
             <td><input type="submit" value="Save" /></td>
         </form>
@@ -83,7 +82,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
     const editable = survey.permission !== AccessLevel.view && survey.allocations.length === 0;
     const locked = survey.permission !== AccessLevel.view && survey.allocations.length > 0;
 
-    const now = formatDatetime(new Date());
+    const now = formatDate(new Date());
     const url = urlBuilder.build('allocation');
 
     return (<body>
@@ -110,8 +109,8 @@ const SurveyView = wrap(({groups, survey}: Props) => {
                     {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
                 </select></td>
                 <td><textarea name="note" /></td>
-                <td><input name="openAt" type="datetime-local" min={now}  /></td>
-                <td><input name="closeAt" type="datetime-local" min={now} /></td>
+                <td><input name="openAt" type="date" min={now}  /></td>
+                <td><input name="closeAt" type="date" min={now} /></td>
                 <td colSpan={3}><input type="submit" value="Add" /></td>
             </form>
         </tr>

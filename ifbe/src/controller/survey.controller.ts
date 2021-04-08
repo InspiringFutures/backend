@@ -23,8 +23,8 @@ import { Group } from '../model/group.model';
 import { GroupService } from '../service/group.service';
 import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
 
-function parseDateOrNull(openAt) {
-    return openAt && openAt !== '' ? new Date(openAt + ':00Z') : null;
+function parseDateOrNull(date: string, endOfDay: boolean) {
+    return date && date !== '' ? new Date(`${date}${endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'}`) : null;
 }
 
 @Controller('survey')
@@ -135,8 +135,8 @@ export class SurveyController {
             openAt = null;
             closeAt = null;
         } else if (type === 'oneoff') {
-            openAt = parseDateOrNull(openAt);
-            closeAt = parseDateOrNull(closeAt);
+            openAt = parseDateOrNull(openAt, false);
+            closeAt = parseDateOrNull(closeAt, true);
         } else {
             throw new BadRequestException("Unknown allocation type");
         }
@@ -170,8 +170,8 @@ export class SurveyController {
 
         allocation.note = note;
         if (allocation.type === 'oneoff') {
-            allocation.openAt = parseDateOrNull(openAt);
-            allocation.closeAt = parseDateOrNull(closeAt);
+            allocation.openAt = parseDateOrNull(openAt, false);
+            allocation.closeAt = parseDateOrNull(closeAt, true);
         }
 
         await allocation.save();
