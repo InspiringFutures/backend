@@ -125,6 +125,7 @@ create table "SurveyAllocations" (id serial primary key,
 	"updatedAt" timestamp not null default now()
 );
 
+CREATE INDEX ON "SurveyAllocations" ("groupId", "type");
 CREATE UNIQUE INDEX ON "SurveyAllocations" ("groupId") WHERE "type" = 'initial';
 
 CREATE TABLE "Answers" (
