@@ -1,8 +1,8 @@
 import * as React from 'react'
-import { Group } from "../../model/group.model";
-import { useUrlBuilder, wrap } from "../wrapper";
-import { Client, ClientStatus as CS } from '../../model/client.model';
-import { AccessLevel, AccessLevels } from "../../model/accessLevels";
+import { Group } from "../../../model/group.model";
+import { useUrlBuilder, wrap } from "../../wrapper";
+import { Client, ClientStatus as CS } from '../../../model/client.model';
+import { AccessLevel } from "../../../model/accessLevels";
 
 interface Props {
     group: Group & {permission: AccessLevel} & {admins: never};
