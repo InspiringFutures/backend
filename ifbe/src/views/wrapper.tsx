@@ -43,6 +43,8 @@ export class UrlBuilder {
         const url = new URL(this.url);
         if (path[0] === '/') {
             url.pathname = path;
+        } else if (path[0] === '.') {
+            url.pathname += path;
         } else {
             url.pathname += '/' + path;
         }

@@ -1,9 +1,14 @@
-import * as React from 'react'
-import { wrap } from "../wrapper";
+import * as React from 'react';
+import { useUrlBuilder, wrap } from '../wrapper';
 import { SurveyAllocation } from '../../model/surveyAllocation.model';
 import { Group } from '../../model/group.model';
 import { Client } from '../../model/client.model';
-import { SurveyQuestion } from '../../model/SurveyContent';
+import {
+    extractAnswer,
+    formatDatetime,
+    UnpackedQuestion,
+    unpackQuestions,
+} from '../../util/survey';
 
 
 interface Props {
@@ -12,67 +17,9 @@ interface Props {
     allocation: SurveyAllocation;
 }
 
-function formatDatetime(date: Date|null) {
-    if (date === null) {
-        return null;
-    }
-    const isoString = date.toISOString();
-    // Remove .000Z milliseconds, and Zulu timezone indicator, replace T with space
-    return isoString.substr(0, isoString.length - 5).replace('T', ' ');
-}
-
-function format(answer: any, question: UnpackedQuestion) {
-    if (answer == null) {
-        return '';
-    }
-    switch (question.type) {
-        case 'TextQuestion':
-        case 'YesNoQuestion':
-        case 'ParagraphQuestion':
-            return answer;
-        case 'ConsentQuestion':
-            return answer ? 'yes' : 'no';
-        case 'ChoiceQuestion':
-            return answer.value === 'other' ? question.choices.length + 1 : answer.value !== -1 ? answer.value + 1 : '';
-        case 'CheckboxQuestion':
-            const options = question.choices.filter((_v, index) => answer.checks[index]);
-            if (answer.otherChecked) {
-                options.push(answer.otherText);
-            }
-            return options.join(", ");
-    }
-}
-
-type UnpackedQuestion = {
-    type: SurveyQuestion['type'];
-    id: string;
-    title: string;
-    subQuestions: string[] | null;
-    commentsPrompt: string | null;
-    colCount: number;
-    cols: string[] | null;
-    rows: string[] | null;
-    choices: string[] | null;
-    allowOther: boolean;
-};
-
 const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
-    const questions: UnpackedQuestion[] = allocation.survey.content.content.map(c => {
-        if (c.type === 'SectionHeader' || c.type === 'TextBlock') return;
-        const isGridQuestion = c.type === 'ChoiceGridQuestion' || c.type === 'CheckboxGridQuestion';
-        return {
-            type: c.type,
-            id: c.id,
-            title: c.title,
-            subQuestions: isGridQuestion ? c.rows : null,
-            commentsPrompt: c.commentsPrompt ?? null,
-            colCount: (isGridQuestion ? c.rows.length : 1) + (c.commentsPrompt ? 1 : 0) + (c.allowOther ? 1 : 0),
-            cols: c.cols ?? null,
-            rows: c.rows ?? null,
-            choices: c.choices ?? null,
-            allowOther: !!c.allowOther,
-       };
-    }).filter(notNull => notNull);
+    const urlBuilder = useUrlBuilder();
+    const questions: UnpackedQuestion[] = unpackQuestions(allocation);
 
     const clientMap = {};
     clients.forEach(client => clientMap[client.id] = client);
@@ -88,6 +35,9 @@ const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
     <h1>Survey results</h1>
     <p><b>Group:</b> {group.name}</p>
     <p><b>Survey:</b> {allocation.survey.name}</p>
+    {allocation.openAt && <p><b>Open at:</b> {allocation.openAt.toLocaleDateString()}</p>}
+    {allocation.closeAt && <p><b>Close at:</b> {allocation.closeAt.toLocaleDateString()}</p>}
+    <p><a href={urlBuilder.build(".csv")}>Download results</a></p>
     <table cellSpacing={0} style={{borderCollapse: 'collapse', padding: '4px', borderLeft: box.borderBottom, borderBottom: box.borderBottom}}>
         <thead>
             <tr style={{borderTop: 'solid 1px #bbb'}}>
@@ -120,28 +70,17 @@ const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
                     {answer.answer.complete ?
                         questions.map((q) => {
                             const answer = answerMap[q.id];
-                            if (q.subQuestions) {
-                                return <React.Fragment key={q.id}>
-                                    {q.subQuestions && q.subQuestions.map((sub, index) => {
-                                        if (q.type === 'ChoiceGridQuestion') {
-                                            const choice = answer?.checks?.[index] ?? null;
-                                            return <td key={index} style={index === q.colCount - 1 ? major : minor}>{choice === null || choice === -1 ? '' : choice + 1}</td>;
-                                        } else if (q.type === 'CheckboxGridQuestion') {
-                                            const choices = answer?.checks?.[index] ?? [];
-                                            return <td key={index} style={index === q.colCount - 1 ? major : minor}>{q.cols.filter((col, index) => choices[index]).join(", ")}</td>;
-                                        } else {
-                                            return <td key={index}>{JSON.stringify({question: q, answer: answer})}</td>;
-                                        }
-                                    })}
-                                    {q.commentsPrompt && <td key="otherComments" style={major}>{answer?.otherComments}</td>}
-                                </React.Fragment>;
-                            } else if (q.allowOther) {
-                                return <React.Fragment key={q.id}>
-                                    <td style={minor}>{format(answer, q)}</td>
-                                    <td style={major}>{answer && answer.value === 'other' ? answer.other : ''}</td>
-                                </React.Fragment>;
+                            const answerList = extractAnswer(q, answer);
+                            if (answerList.length === 1) {
+                                return <td key={q.id} style={major}>{answerList[0]}</td>;
                             } else {
-                                return <td key={q.id} style={major}>{format(answer, q)}</td>;
+                                return <React.Fragment key={q.id}>
+                                    {answerList.map((a, index) =>
+                                        <td key={index} style={index === answerList.length - 1 ? major : minor}>
+                                            {a}
+                                        </td>
+                                    )}
+                                </React.Fragment>
                             }
                         })
                         : <td colSpan={total} style={major}>Not answered</td>

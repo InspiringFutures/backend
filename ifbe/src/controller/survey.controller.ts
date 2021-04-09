@@ -1,14 +1,17 @@
 import {
     BadRequestException,
     Body,
+    flatten,
     Get,
     Injectable,
     Param,
     ParseIntPipe,
     Post,
-    Render,
+    Render, Res,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
+import { createArrayCsvStringifier } from 'csv-writer';
+
 
 import { Controller, Page } from '../util/autopage';
 import { Admin } from '../model/admin.model';
@@ -22,6 +25,7 @@ import { Survey } from '../model/survey.model';
 import { Group } from '../model/group.model';
 import { GroupService } from '../service/group.service';
 import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
+import { extractAnswer, formatDatetime, UnpackedQuestion, unpackQuestions } from '../util/survey';
 
 function parseDateOrNull(date: string, endOfDay: boolean) {
     return date && date !== '' ? new Date(`${date}${endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'}`) : null;
@@ -217,6 +221,70 @@ export class SurveyController {
             allocation,
             //answers: allocation.answers,
         };
+    }
+
+    @Get('(:id/allocation/)?:allocationId/results.csv')
+    @NeedsAdmin
+    async viewResultsCSV(@Param('allocationId', ParseIntPipe) allocationId:  number, @Res() res) {
+        const {group, clients, allocation} = await this.viewResults(allocationId);
+
+        const questions: UnpackedQuestion[] = unpackQuestions(allocation);
+
+        const clientMap = {};
+        clients.forEach(client => clientMap[client.id] = client);
+
+        const cols = flatten(questions.map((q) => {
+            if (q.colCount > 1) {
+                let prefix = q.title ? q.title.trim() : "";
+                if (prefix != '') {
+                    if (!prefix.endsWith(':')) {
+                        prefix += ':';
+                    }
+                    prefix += " ";
+                }
+                return [
+                    ...(q.subQuestions || []).map((sub) => prefix + sub),
+                    ...q.commentsPrompt ? [prefix + "Other comments"] : [],
+                    ...q.allowOther ? [q.title, prefix + `Other (choice ${q.choices.length + 1})`] : [],
+                ];
+            } else {
+                return [q.title];
+            }
+        }));
+        cols.unshift('Participant ID', 'Completed', 'Completed at');
+
+        const csvStringifier = createArrayCsvStringifier({
+            header: cols,
+            recordDelimiter: "\r\n",
+        });
+
+        let name = `${allocation.survey.name} - ${group.name}`;
+        if (allocation.openAt) {
+            name += ` - ${allocation.openAt.toLocaleDateString()}`;
+        }
+        if (allocation.closeAt) {
+            name += ` - ${allocation.closeAt.toLocaleDateString()}`;
+        }
+        name += '.csv';
+        name = name.replace(/[^a-zA-Z0-9-. _]/g, '.');
+
+        res.attachment(name).send(csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(
+            allocation.answers.map((answer) => {
+                const answerMap = answer.answer.answers;
+                const row = [
+                    clientMap[answer.clientId].participantID,
+                    answer.answer.complete ? 'yes' : 'no',
+                ];
+                if (answer.answer.complete) {
+                    row.push(formatDatetime(answer.updatedAt));
+                    questions.forEach((q) => {
+                        const answer = answerMap[q.id];
+                        row.push(...extractAnswer(q, answer));
+                    });
+                }
+                return row;
+            })
+        ));
     }
 
     private async hasSurveyAccess(surveyId: number, neededLevel: AccessLevel) {
