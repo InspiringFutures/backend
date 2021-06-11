@@ -11,6 +11,8 @@ const fs = Promise.promisifyAll(require('fs'));
 
 import { AppModule } from '../src/app.module';
 import { JournalService } from "../src/service/journal.service";
+import client from '../src/views/admin/client';
+import { StorageService } from '../src/service/storage.service';
 
 const httpGet: (url: string) => Promise<{ body: string, headers: IncomingHttpHeaders }> = (url: string) => {
   return new Promise((resolve, reject) => {
@@ -28,6 +30,9 @@ async function runSQL(connection: Sequelize, path: string) {
     return connection.query(data.toString());
 }
 
+const clientId = 1;
+
+const ALLOWED_CLIENT_TOKEN = 'CLIENT_TOKEN_1';
 describe('Uploads from clients (e2e)', () => {
     let app: INestApplication;
 
@@ -40,14 +45,14 @@ describe('Uploads from clients (e2e)', () => {
         await app.init();
 
         const connection: Sequelize = app.get(getConnectionToken());
-        await runSQL(connection, './test/db-clear.sql');
-        await runSQL(connection, '../db-init.sql');
-        await runSQL(connection, './test/db-test-data.sql');
+        await runSQL(connection, './db-clear.sql');
+        await runSQL(connection, '../../db-init.sql');
+        await runSQL(connection, './db-test-data.sql');
     });
 
-    const authClientPost = (url: string, token: string = 'CLIENT_TOKEN_1') => {
+    const authClientPost = (url: string, token: string = ALLOWED_CLIENT_TOKEN) => {
         return request(app.getHttpServer())
-            .post('/api/client/1/' + url)
+            .post(`/api/client/${clientId}/${url}`)
             .set('X-Token', token);
     };
 
@@ -159,5 +164,85 @@ describe('Uploads from clients (e2e)', () => {
           expect(response.body).toEqual(TEST_MEDIA + id);
           expect(response.headers['x-amz-meta-xref']).toEqual(xref);
         }));
+    });
+
+    const TEST_MEDIA = 'TEST MEDIA';
+    const url = '/some/path';
+
+    async function uploadMedia() {
+
+        const initialIds = [1, 2, 3];
+        const initialMedia = initialIds.map(id => ({ url: url + id, type: 'photo' }));
+
+        const initialResponse = await authClientPost('journal')
+            .send({
+                clientJournalId: 'arbitrary1',
+                type: 'media',
+                media: initialMedia,
+                caption: 'Some caption',
+            });
+        const journalId = initialResponse.body.id;
+        await Promise.map(initialIds, async id => ({
+            id, journalEntryId: (await authClientPost(`journal/${journalId}/media`)
+                .field('url', url + id)
+                .field('xref', 'xref')
+                .attach('upload', Buffer.from(TEST_MEDIA + id), 'ignore the filename')
+                .expect(201)).body.id,
+        }));
+        return journalId;
+    }
+
+    it('Change media upload', async () => {
+        const journalId = await uploadMedia();
+
+        const updatedIds = [2, 3, 4];
+        const updatedMedia = updatedIds.map(id => ({url: url + id, type: 'photo'}));
+        const updatedResponse = await authClientPost('journal')
+            .send({
+                clientJournalId: 'arbitrary1',
+                type: 'media',
+                media: updatedMedia,
+                caption: 'New caption',
+            });
+        const updatedJournalId = updatedResponse.body.id;
+
+        expect(updatedJournalId).toEqual(journalId);
+
+        // TODO: Only upload file 4
+        const journalEntryIds = await Promise.map(updatedIds, async id => ({id, journalEntryId: (await authClientPost(`journal/${updatedJournalId}/media`)
+                .field('url', url + id)
+                .field('xref', 'xref')
+                .attach('upload', Buffer.from(TEST_MEDIA + id), 'ignore the filename')
+                .expect(201)).body.id}));
+
+        const journalService = app.get(JournalService);
+        const journal = await journalService.get(clientId, updatedJournalId);
+        expect(journal.entries.length).toEqual(3);
+        const bodies = await Promise.all(journalEntryIds.map(async ({id, journalEntryId}) => {
+            const mediaUrl = await journalService.getMediaUrl(1, updatedJournalId, journalEntryId);
+            const response = await httpGet(mediaUrl);
+            return response.body;
+        }));
+        expect(bodies).toEqual(updatedIds.map(id => TEST_MEDIA + id));
+    });
+
+
+    it('Can delete media journal', async () => {
+        const storageService = app.get(StorageService);
+
+        const existingContents = await storageService._test_listing();
+
+        const journalId = await uploadMedia();
+        await request(app.getHttpServer())
+            .delete(`/api/client/${clientId}/journal`)
+            .set('X-Token', ALLOWED_CLIENT_TOKEN)
+            .send({
+                clientJournalId: 'arbitrary1',
+            })
+            .expect(200);
+
+        const newContents = await storageService._test_listing();
+
+        expect(newContents).toEqual(existingContents);
     });
 });

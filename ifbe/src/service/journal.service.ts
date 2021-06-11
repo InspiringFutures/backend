@@ -1,5 +1,5 @@
 import { InjectModel } from "@nestjs/sequelize";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Writable } from "stream";
 
 import { Client } from "../model/client.model";
@@ -7,6 +7,7 @@ import { Take } from "../util/types";
 import { Journal } from "../model/journal.model";
 import { JournalEntry } from "../model/journalEntry.model";
 import { StorageService } from "./storage.service";
+import { Model } from 'sequelize-typescript';
 
 export type PhotoContent = {type: 'photo'; url: string};
 export type VideoContent = {type: 'video'; url: string};
@@ -24,6 +25,10 @@ export type JournalType = Take<JournalContent, 'type'>;
 
 interface StorageItem {
     key: string;
+}
+
+function extractJournalText(journal: JournalContent): string {
+    return journal.type === 'text' ? journal.text : journal.type === 'media' ? journal.caption : '' + journal.length;
 }
 
 export class JournalService {
@@ -45,13 +50,58 @@ export class JournalService {
 
     async add(client: Client, journal: JournalContent) {
         const entries = JournalService.extractEntries(journal);
-        return await this.journalModel.create({
-            type: journal.type,
-            clientId: client.id,
-            text: journal.type === 'text' ? journal.text : journal.type === 'media' ? journal.caption : journal.length,
-            clientJournalId: journal.clientJournalId,
-            entries: entries,
-        }, {include: [{all: true}]});
+
+        const existing = await this.journalModel.findOne({where: {clientId: client.id, clientJournalId: journal.clientJournalId}, include: [{all: true}]});
+        if (existing) {
+            if (existing.type !== journal.type) {
+                throw new BadRequestException("Cannot change journal type");
+            }
+            existing.text = extractJournalText(journal);
+            // Match up existing entries to new entries
+            const existingClientEntryIds = new Set<string>();
+            existing.entries.forEach((oldEntry) => {
+                if (entries.some(e => oldEntry.clientEntryId === e.clientEntryId)) {
+                    // Nothing to do
+                    existingClientEntryIds.add(oldEntry.clientEntryId);
+                } else {
+                    oldEntry.destroy();
+                }
+            });
+            entries.forEach((newEntry) => {
+                if (existingClientEntryIds.has(newEntry.clientEntryId)) {
+                    // Already handled
+                    return;
+                }
+                existing.$create('entry', newEntry);
+            });
+            return existing.save();
+        } else {
+            return this.journalModel.create({
+                type: journal.type,
+                clientId: client.id,
+                text: extractJournalText(journal),
+                clientJournalId: journal.clientJournalId,
+                entries: entries,
+            }, {include: [{all: true}]});
+        }
+    }
+
+    async delete(client: Client|number, clientJournalId: string) {
+        const journal = await this.journalModel.findOne({
+            where: {clientId: (typeof client === 'number' ? client : client.id), clientJournalId},
+            include: ['entries'],
+        });
+        if (journal.clientId !== (typeof client === 'number' ? client : client.id)) {
+            throw new Error("Mismatched client/journal");
+        }
+        if (journal.entries.length > 0) {
+            await Promise.all(journal.entries.map(async (entry) => {
+                const result = await this.storageService.delete(entry.storageUrl);
+                result.send();
+                await entry.destroy();
+            }));
+        }
+        return journal.destroy();
     }
 
     async get(client: Client|number, journalId: number) {
@@ -69,6 +119,7 @@ export class JournalService {
             return entry.id === journalEntryId;
         });
         if (!entry) {
+            console.log(journal, journal.entries, journalEntryId);
             throw new NotFoundException("Unknown journal entry");
         }
 
@@ -86,6 +137,6 @@ export class JournalService {
         // Store the uploaded id in the entry
         entry.storageUrl = upload.key;
 
-        return await entry.save();
+        return entry.save();
     }
 }

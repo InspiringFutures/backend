@@ -1,3 +1,6 @@
+drop table if exists "Answers";
+drop table if exists "SurveyAllocations";
+drop table if exists "SurveyVersions";
 drop table if exists "SurveyPermissions";
 drop table if exists "Surveys";
 drop table if exists "Tokens";

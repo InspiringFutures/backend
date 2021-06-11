@@ -48,6 +48,14 @@ export class StorageService{
     async status() {
         return this.s3.headBucket({Bucket: this.config.container});
     }
+
+    async delete(id: string) {
+        return this.s3.deleteObject({Bucket: this.config.container, Key: id});
+    }
+
+    async _test_listing() {
+        return (await this.s3.listObjects({Bucket: this.config.container}).promise()).Contents;
+    }
 }
 
 export const StorageServiceProvider = {

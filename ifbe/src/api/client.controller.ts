@@ -1,6 +1,6 @@
 import {
     Body,
-    Controller,
+    Controller, Delete,
     ForbiddenException, Get,
     Headers,
     Injectable,
@@ -119,8 +119,15 @@ export class ClientController {
     @Post(':clientId/journal')
     async addJournal(@Param('clientId') clientId: number, @Body() journal: JournalContent, @Headers('X-Token') token: string) {
         const client = await this.authenticateClient(clientId, token);
-        return await this.journalService.add(client, journal);
+        return this.journalService.add(client, journal);
     }
+
+    @Delete(':clientId/journal')
+    async deleteJournal(@Param('clientId') clientId: number, @Body() journal: JournalContent, @Headers('X-Token') token: string) {
+        const client = await this.authenticateClient(clientId, token);
+        return await this.journalService.delete(client, journal.clientJournalId);
+    }
+
 
     @Post(':clientId/journal/:journalId/media')
     @UseInterceptors(FileInterceptor('upload'))
