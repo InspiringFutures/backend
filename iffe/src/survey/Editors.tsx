@@ -5,6 +5,7 @@ import {
     ChoiceQuestion,
     ConsentQuestion,
     Content,
+    JournalQuestion,
     ParagraphQuestion,
     SectionHeader,
     TextBlock,
@@ -16,7 +17,13 @@ import Typography from "@material-ui/core/Typography";
 import { EditableText } from "./EditableText";
 import React, { forwardRef, useContext, useEffect, useRef } from "react";
 import { EditableTextArray } from "./EditableTextArray";
-import { Checkbox, FormControlLabel, IconButton, Paper, Tooltip } from "@material-ui/core";
+import {
+    Checkbox,
+    FormControlLabel,
+    IconButton,
+    Paper,
+    Tooltip
+} from "@material-ui/core";
 import { Spacer } from "./Spacer";
 import { EditorContext } from "./EditorContext";
 import FilterNoneIcon from "@material-ui/icons/FilterNone";
@@ -178,6 +185,15 @@ const CheckboxGridQuestionEditor: Editor<CheckboxGridQuestion> = (props) => {
     </QuestionEditor>;
 };
 
+
+const JournalQuestionEditor: Editor<JournalQuestion> = (props) => {
+    return <QuestionEditor {...props}>
+        <div>
+            <i>Clients can enter journal entries here</i>
+        </div>
+    </QuestionEditor>;
+};
+
 const Editors: { [name in Content["type"]]: Editor<any> } = {
     "SectionHeader": SectionHeaderEditor, // Uses EditorContext so can't memoise
     "TextBlock": React.memo(TextBlockEditor),
@@ -189,6 +205,7 @@ const Editors: { [name in Content["type"]]: Editor<any> } = {
     "CheckboxQuestion": React.memo(CheckboxQuestionEditor),
     "ChoiceGridQuestion": React.memo(ChoiceGridQuestionEditor),
     "CheckboxGridQuestion": React.memo(CheckboxGridQuestionEditor),
+    "JournalQuestion": React.memo(JournalQuestionEditor),
 };
 
 const EditorFooter: Editor<Content> = ({content, modify}) => {

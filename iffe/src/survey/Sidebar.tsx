@@ -34,6 +34,8 @@ function getSidebarItems() {
         pick("ChoiceGridQuestion"),
         pick("CheckboxGridQuestion"),
         null,
+        pick("JournalQuestion"),
+        null,
         pick("ConsentQuestion"),
     ];
 }

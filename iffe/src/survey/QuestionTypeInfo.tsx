@@ -8,6 +8,7 @@ import CheckBoxIcon from "@material-ui/icons/CheckBox";
 import DragIndicatorIcon from "@material-ui/icons/DragIndicator";
 import GridOnIcon from "@material-ui/icons/GridOn";
 import HowToRegIcon from "@material-ui/icons/HowToReg";
+import CreateIcon from '@material-ui/icons/Create';
 
 import { Question } from "./SurveyContent";
 import { TypeInfo } from "./TypeMenu";
@@ -20,5 +21,6 @@ export const QuestionTypeInfo: TypeInfo<Question["type"]> = {
     "CheckboxQuestion": {icon: <CheckBoxIcon/>, name: "Checkboxes"},
     "ChoiceGridQuestion": {icon: <DragIndicatorIcon/>, name: "Choice grid"},
     "CheckboxGridQuestion": {icon: <GridOnIcon/>, name: "Checkbox grid"},
-    "ConsentQuestion": {icon: <HowToRegIcon/>, name: "Consent"}
+    "ConsentQuestion": {icon: <HowToRegIcon/>, name: "Consent"},
+    "JournalQuestion": {icon: <CreateIcon/>, name: "Journal"}
 };

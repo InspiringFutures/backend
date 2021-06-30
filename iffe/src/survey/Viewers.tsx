@@ -25,6 +25,7 @@ import {
     ChoiceQuestion,
     ConsentQuestion,
     Content,
+    JournalQuestion,
     ParagraphQuestion,
     SectionHeader,
     TextBlock,
@@ -240,6 +241,16 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content, acti
     </>;
 };
 
+const JournalQuestionViewer: Viewer<JournalQuestion> = ({content}) => {
+    return <>
+        <FormLabel>{content.title}</FormLabel>
+        <Description content={content}/>
+        <div>
+            <i>Clients can enter journal entries here</i>
+        </div>
+    </>;
+};
+
 export const Viewers: { [name in Content["type"]]: Viewer<any> } = {
     "SectionHeader": React.memo(SectionHeaderViewer),
     "TextBlock": React.memo(TextBlockViewer),
@@ -251,6 +262,7 @@ export const Viewers: { [name in Content["type"]]: Viewer<any> } = {
     "CheckboxQuestion": React.memo(CheckboxQuestionViewer),
     "ChoiceGridQuestion": React.memo(ChoiceGridQuestionViewer),
     "CheckboxGridQuestion": React.memo(CheckboxGridQuestionViewer),
+    "JournalQuestion": React.memo(JournalQuestionViewer),
 };
 
 export const ContentViewer = ({content}: ViewerProps<Content>) => {
