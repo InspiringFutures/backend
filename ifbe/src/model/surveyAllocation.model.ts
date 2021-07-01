@@ -3,14 +3,15 @@ import {
     AutoIncrement,
     BelongsTo,
     Column,
-    ForeignKey, HasMany,
+    ForeignKey,
+    HasMany,
     Model,
     PrimaryKey,
     Table,
 } from 'sequelize-typescript';
 
-import { Admin } from "./admin.model";
-import { Group } from "./group.model";
+import { Admin } from './admin.model';
+import { Group } from './group.model';
 import { Survey } from './survey.model';
 import { DataTypes } from 'sequelize';
 import { Answer } from './answer.model';

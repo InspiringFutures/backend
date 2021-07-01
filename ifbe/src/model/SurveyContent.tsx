@@ -63,6 +63,10 @@ export interface ChoiceGridQuestion extends Question {
     commentsPrompt?: string;
 }
 
+export interface JournalQuestion extends Question {
+    readonly type: 'JournalQuestion';
+}
+
 export type SurveyQuestion =
     | TextQuestion
     | YesNoQuestion
@@ -71,7 +75,8 @@ export type SurveyQuestion =
     | ChoiceQuestion
     | ChoiceGridQuestion
     | CheckboxQuestion
-    | CheckboxGridQuestion;
+    | CheckboxGridQuestion
+    | JournalQuestion;
 
 export type SurveyContent = SectionHeader | TextBlock | SurveyQuestion;
 

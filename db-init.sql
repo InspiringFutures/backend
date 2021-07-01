@@ -140,3 +140,11 @@ CREATE TABLE "Answers" (
 );
 
 CREATE UNIQUE INDEX ON "Answers" ("clientId", "surveyAllocationId");
+
+CREATE UNIQUE INDEX ON "Journals" ("clientId", "clientJournalId");
+
+ALTER TABLE "Journals" ADD COLUMN "answerId" INTEGER NULL;
+ALTER TABLE "Journals"
+    ADD CONSTRAINT "Journals_answerId_fkey"  FOREIGN KEY ("answerId") REFERENCES public."Answers"(id);
+
+ALTER TABLE "Journals" ADD COLUMN "hidden" BOOLEAN NOT NULL DEFAULT 'f';

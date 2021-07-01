@@ -105,7 +105,7 @@ export class ClientService {
     }
 
     async getJournalEntries(client: Client) {
-        const journals: Journal[] = await this.journalModel.findAll({where: {clientId: client.id}, include: [{all: true}]});
+        const journals: Journal[] = await this.journalModel.findAll({where: {clientId: client.id, answerId: null}, include: [{all: true}]});
         const raw = journals.map((journal) => {
             return {
                 ...journal.get(),

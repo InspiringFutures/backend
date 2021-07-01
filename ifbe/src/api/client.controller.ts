@@ -14,7 +14,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { RegisterClientDto } from '../dto/client.create.dto';
-import { JournalContent, JournalService } from '../service/journal.service';
+import { ClientJournalEntry, JournalService } from '../service/journal.service';
 import { ClientService } from '../service/client.service';
 import { GroupService } from '../service/group.service';
 import { Client } from '../model/client.model';
@@ -22,6 +22,7 @@ import { extractGroupJoinDTO } from './group.controller';
 import { Group } from '../model/group.model';
 import { InjectModel } from '@nestjs/sequelize';
 import { Answer } from '../model/answer.model';
+import { SurveyContent } from '../model/SurveyContent';
 
 function extractCheckClientDTO(client: Client) {
     return {
@@ -117,15 +118,15 @@ export class ClientController {
     }
 
     @Post(':clientId/journal')
-    async addJournal(@Param('clientId') clientId: number, @Body() journal: JournalContent, @Headers('X-Token') token: string) {
+    async addJournal(@Param('clientId') clientId: number, @Body() journal: ClientJournalEntry, @Headers('X-Token') token: string) {
         const client = await this.authenticateClient(clientId, token);
         return this.journalService.add(client, journal);
     }
 
     @Delete(':clientId/journal')
-    async deleteJournal(@Param('clientId') clientId: number, @Body() journal: JournalContent, @Headers('X-Token') token: string) {
+    async deleteJournal(@Param('clientId') clientId: number, @Body() journal: {id: string}, @Headers('X-Token') token: string) {
         const client = await this.authenticateClient(clientId, token);
-        return await this.journalService.delete(client, journal.clientJournalId);
+        return this.journalService.delete(client, journal.id);
     }
 
 
@@ -182,7 +183,7 @@ export class ClientController {
                 return;
             }
             results.push({
-                answerId: answer.id,
+                id: '' + answer.id,
                 closeAt: allocation.closeAt,
                 content: allocation.survey.content.content,
             });
@@ -194,7 +195,7 @@ export class ClientController {
     @Post(':clientId/answer/:answerId')
     async answerSurvey(@Param('clientId') clientId: number, @Param('answerId') answerId: number, @Headers('X-Token') token: string, @Body() answers: any, @Res() res) {
         const client = await this.authenticateClient(clientId, token);
-        const answer = await this.answerModel.findByPk(answerId);
+        const answer = await this.answerModel.findByPk(answerId, {include: ["surveyAllocation"]});
         if (answer.clientId !== client.id) {
             throw new ForbiddenException("Answer doesn't belong to this client.");
         }
@@ -205,8 +206,28 @@ export class ClientController {
             complete: true,
             answers,
         };
+
+        const survey = await answer.surveyAllocation.$get('survey');
+        const surveyContent: SurveyContent[] = survey.content.content;
+        // Process answers to extract journals
+        const journalAnswers: [string, ClientJournalEntry[]][] = Object.keys(answers).filter((questionId) => {
+            return surveyContent.find((c) => c.id === questionId && c.type === 'JournalQuestion');
+        }).map((questionId) => {
+            return [questionId, answers[questionId]];
+        });
+        // Create the journal entry rows
+        const journalIds = await Promise.all(journalAnswers.map(async ([questionId, entries]) => {
+            const questionJournals = await Promise.all(entries.map(async (entry) => {
+                const journal = await this.journalService.add(client, entry, answerId);
+                return [journal.clientJournalId, journal.id] as [string, number];
+            }));
+            return [questionId, Object.fromEntries(questionJournals)];
+        }));
+        // Return the questionId => journal id mapping
+        const mapping: { [questionId: string]: { [clientJournalId: string]: number } } = Object.fromEntries(journalIds);
+
         await answer.save();
-        res.sendStatus(201);
+        res.status(201).send(mapping);
     }
 
 
@@ -236,7 +257,7 @@ export class ClientController {
             participantID: client.participantID,
             token: client.token,
             initialSurveyToAnswer: initialSurveyAllocation ? {
-                answerId: answer.id,
+                id: '' + answer.id,
                 content: initialSurveyAllocation.survey.content.content,
             } : undefined,
         };

@@ -62,53 +62,75 @@ describe('Uploads from clients (e2e)', () => {
     it('Returns 403 if no token provided', async () => {
         await authClientPost('journal', null)
             .send({
-                      clientJournalId: mediaClientJournalId,
-                      type: 'media',
-                      media: [
-                          {clientMediaId: '/some/path', type: 'photo'},
-                      ],
-                      caption: 'Some caption',
-                  })
+                id: mediaClientJournalId,
+                date: new Date(),
+                content: {
+                    type: 'media',
+                    media: [
+                        { clientMediaId: '/some/path', type: 'photo' },
+                    ],
+                    caption: 'Some caption',
+                }
+            })
             .expect(403)
     });
 
     it('Returns 403 if wrong token provided', async () => {
         await authClientPost('journal', 'invalid')
             .send({
-                      clientJournalId: mediaClientJournalId,
+                id: mediaClientJournalId,
+                date: new Date(),
+                content: {
                       type: 'media',
                       media: [
                           {clientMediaId: '/some/path', type: 'photo'},
                       ],
                       caption: 'Some caption',
-                  })
+                },
+            })
             .expect(403)
     });
 
 
-    it('Text upload', async () => {
-        await authClientPost('journal')
+    async function uploadText() {
+        return authClientPost('journal')
             .send({
-                clientJournalId: 'arbitraryText',
-                type: 'text',
-                text: 'Some Journal entry'
+                id: 'arbitraryText',
+                date: new Date(),
+                content: {
+                    type: 'text',
+                    text: 'Some Journal entry',
+                },
             })
             .expect(201)
             .expect((res) => {
-                if (res.body.clientId != 1) throw new Error("Incorrect client");
-                if (!('id' in res.body)) throw new Error("missing id");
+                if (res.body.clientId != 1) throw new Error('Incorrect client');
+                if (!('id' in res.body)) throw new Error('missing id');
             });
+    }
+
+    it('Text upload', async () => {
+        await uploadText();
+    });
+
+    it('Multiple text upload creates single entry', async () => {
+        const journalId1 = (await uploadText()).body.id;
+        const journalId2 = (await uploadText()).body.id;
+        expect(journalId2).toBe(journalId1);
     });
 
     it('Single photo upload', async () => {
         const response = await authClientPost('journal')
             .send({
-                clientJournalId: mediaClientJournalId,
-                type: 'media',
-                media: [
-                    {url, type: 'photo'},
-                ],
-                caption: 'Some caption',
+                id: mediaClientJournalId,
+                date: new Date(),
+                content: {
+                    type: 'media',
+                    media: [
+                        {url, type: 'photo'},
+                    ],
+                    caption: 'Some caption',
+                },
             })
             .expect(201)
             .expect((res) => {
@@ -149,10 +171,13 @@ describe('Uploads from clients (e2e)', () => {
 
         const initialResponse = await authClientPost('journal')
             .send({
-                clientJournalId: mediaClientJournalId,
-                type: 'media',
-                media: initialMedia,
-                caption: 'Some caption',
+                id: mediaClientJournalId,
+                date: new Date(),
+                content: {
+                    type: 'media',
+                    media: initialMedia,
+                    caption: 'Some caption',
+                },
             });
         const journalId = initialResponse.body.id;
 
@@ -173,10 +198,13 @@ describe('Uploads from clients (e2e)', () => {
         const updatedMedia = updatedIds.map(id => ({url: url + id, type: 'photo'}));
         const updatedResponse = await authClientPost('journal')
             .send({
-                clientJournalId: mediaClientJournalId,
-                type: 'media',
-                media: updatedMedia,
-                caption: 'New caption',
+                id: mediaClientJournalId,
+                date: new Date(),
+                content: {
+                    type: 'media',
+                    media: updatedMedia,
+                    caption: 'New caption',
+                },
             });
         const updatedJournalId = updatedResponse.body.id;
 
@@ -212,7 +240,7 @@ describe('Uploads from clients (e2e)', () => {
             .delete(`/api/client/${clientId}/journal`)
             .set('X-Token', ALLOWED_CLIENT_TOKEN)
             .send({
-                clientJournalId: mediaClientJournalId,
+                id: mediaClientJournalId,
             })
             .expect(200);
 

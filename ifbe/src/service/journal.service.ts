@@ -19,15 +19,23 @@ export type MediaContent = {
 };
 export type AudioContent = {type: 'audio'; url: string; length: number};
 export type TextContent = {type: 'text'; text: string};
-export type JournalContent = (TextContent | MediaContent | AudioContent) & {clientJournalId: string};
 
-export type JournalType = Take<JournalContent, 'type'>;
+type JournalContents = (TextContent | MediaContent | AudioContent);
+
+export interface ClientJournalEntry {
+    id: string;
+    date: Date;
+    hidden?: boolean;
+    content: JournalContents;
+}
+
+export type JournalType = Take<JournalContents, 'type'>;
 
 interface StorageItem {
     key: string;
 }
 
-function extractJournalText(journal: JournalContent): string {
+function extractJournalText(journal: JournalContents): string {
     return journal.type === 'text' ? journal.text : journal.type === 'media' ? journal.caption : '' + journal.length;
 }
 
@@ -37,7 +45,7 @@ export class JournalService {
         private storageService: StorageService,
     ) {}
 
-    private static extractEntries(journal: JournalContent) {
+    private static extractEntries(journal: JournalContents) {
         switch (journal.type) {
             case 'media':
                 return journal.media.map((m, i) => ({clientEntryId: m.url, type: m.type, sequence: i + 1}));
@@ -48,15 +56,19 @@ export class JournalService {
         }
     }
 
-    async add(client: Client, journal: JournalContent) {
-        const entries = JournalService.extractEntries(journal);
+    async add(client: Client, journal: ClientJournalEntry, answerId?: number) {
+        const entries = JournalService.extractEntries(journal.content);
 
-        const existing = await this.journalModel.findOne({where: {clientId: client.id, clientJournalId: journal.clientJournalId}, include: [{all: true}]});
+        const existing = await this.journalModel.findOne({where: {clientId: client.id, clientJournalId: journal.id}, include: [{all: true}]});
         if (existing) {
-            if (existing.type !== journal.type) {
+            if (existing.type !== journal.content.type) {
                 throw new BadRequestException("Cannot change journal type");
             }
-            existing.text = extractJournalText(journal);
+            if (existing.answerId || answerId) {
+                throw new BadRequestException("Cannot update survey answer.");
+            }
+            existing.text = extractJournalText(journal.content);
+            existing.hidden = journal.hidden ?? false;
             // Match up existing entries to new entries
             const existingClientEntryIds = new Set<string>();
             existing.entries.forEach((oldEntry) => {
@@ -76,12 +88,19 @@ export class JournalService {
             });
             return existing.save();
         } else {
+            let createdAt = new Date(journal.date);
+            if (createdAt.getTime() > Date.now()) {
+                createdAt = new Date();
+            }
             return this.journalModel.create({
-                type: journal.type,
+                type: journal.content.type,
                 clientId: client.id,
-                text: extractJournalText(journal),
-                clientJournalId: journal.clientJournalId,
+                text: extractJournalText(journal.content),
+                hidden: journal.hidden ?? false,
+                clientJournalId: journal.id,
                 entries: entries,
+                answerId,
+                createdAt,
             }, {include: [{all: true}]});
         }
     }

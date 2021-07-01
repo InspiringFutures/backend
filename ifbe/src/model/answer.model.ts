@@ -3,7 +3,7 @@ import {
     AutoIncrement,
     BelongsTo,
     Column,
-    ForeignKey,
+    ForeignKey, HasMany,
     Model,
     PrimaryKey,
     Table,
@@ -12,6 +12,7 @@ import {
 import { DataTypes } from 'sequelize';
 import { SurveyAllocation } from './surveyAllocation.model';
 import { Client } from './client.model';
+import { Journal } from './journal.model';
 
 @Table
 export class Answer extends Model<Answer> {
@@ -43,4 +44,7 @@ export class Answer extends Model<Answer> {
             [questionId: string]: any;
         };
     };
+
+    @HasMany(() => Journal)
+    journals: Journal[];
 }
