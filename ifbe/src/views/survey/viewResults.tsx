@@ -9,17 +9,25 @@ import {
     UnpackedQuestion,
     unpackQuestions,
 } from '../../util/survey';
+import { JournalEntry } from '../../model/journalEntry.model';
+import { EntryRow } from '../admin/client';
+import { Journal } from '../../model/journal.model';
 
 
 interface Props {
     group: Group;
     clients: Client[];
     allocation: SurveyAllocation;
+    journals: {[answerId: string]: {[questionId: string]: Journal[]}};
 }
 
-const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
+const SurveyResultsView = wrap(({group, clients, allocation, journals}: Props) => {
     const urlBuilder = useUrlBuilder();
     const questions: UnpackedQuestion[] = unpackQuestions(allocation);
+
+    function accessStorage(clientId: number, journalId: number, entryId: number) {
+        return urlBuilder.absolute(`/admin/group/${group.id}/client/${clientId}/journal/${journalId}/entry/${entryId}/raw`);
+    }
 
     const clientMap = {};
     clients.forEach(client => clientMap[client.id] = client);
@@ -62,24 +70,33 @@ const SurveyResultsView = wrap(({group, clients, allocation}: Props) => {
             </tr>
         </thead>
         <tbody>
-            {allocation.answers.map((answer, rowIndex) => {
-                const answerMap = answer.answer.answers;
-                return <tr key={answer.id} style={rowIndex % 2 === 0 ? {backgroundColor: '#f4f4f4'} : undefined}>
-                    <td style={major}>{clientMap[answer.clientId].participantID}</td>
-                    <td style={major}>{answer.answer.complete ? formatDatetime(answer.updatedAt) : ''}</td>
-                    {answer.answer.complete ?
+            {allocation.answers.map((answerSet, rowIndex) => {
+                const answerMap = answerSet.answer.answers;
+                return <tr key={answerSet.id} style={rowIndex % 2 === 0 ? {backgroundColor: '#f4f4f4'} : undefined}>
+                    <td style={major}>{clientMap[answerSet.clientId].participantID}</td>
+                    <td style={major}>{answerSet.answer.complete ? formatDatetime(answerSet.updatedAt) : ''}</td>
+                    {answerSet.answer.complete ?
                         questions.map((q) => {
+                            if (q.type === 'JournalQuestion') {
+                                // Get journals
+                                const journalList = journals?.[answerSet.id]?.[q.id] ?? [];
+                                console.log(journalList);
+                                return <td key={q.id} style={major}>{
+                                    journalList.map((journal: Journal) => <EntryRow key={journal.id} accessStorage={accessStorage} entry={journal} />)
+                                }</td>;
+                            }
                             const answer = answerMap[q.id];
                             const answerList = extractAnswer(q, answer);
                             if (answerList.length === 1) {
                                 return <td key={q.id} style={major}>{answerList[0]}</td>;
                             } else {
                                 return <React.Fragment key={q.id}>
-                                    {answerList.map((a, index) =>
-                                        <td key={index} style={index === answerList.length - 1 ? major : minor}>
+                                    {answerList.map((a, index) => {
+                                        return <td key={index}
+                                                   style={index === answerList.length - 1 ? major : minor}>
                                             {a}
-                                        </td>
-                                    )}
+                                        </td>;
+                                    })}
                                 </React.Fragment>
                             }
                         })

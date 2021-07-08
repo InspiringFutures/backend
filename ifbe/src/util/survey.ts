@@ -1,5 +1,7 @@
 import { SurveyAllocation } from '../model/surveyAllocation.model';
 import { SurveyQuestion } from '../model/SurveyContent';
+import { JournalEntry } from '../model/journalEntry.model';
+import { Journal } from '../model/journal.model';
 
 function formatAnswer(answer: any, question: UnpackedQuestion) {
     if (answer == null) {

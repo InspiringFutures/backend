@@ -16,7 +16,7 @@ interface Props {
 const Entry = ({entry, accessStorage}: {entry: Journal, accessStorage: AccessStorage}) => {
 
     function tagFor(je: JournalEntry) {
-        const src = accessStorage(entry.id, je.id);
+        const src = accessStorage(entry.clientId, entry.id, je.id);
         switch (je.type) {
             case 'photo':
                 return <a style={{paddingLeft: '5px'}} href={src} target="_blank"><img width={250} key={je.clientEntryId} src={src} /></a>;
@@ -29,7 +29,7 @@ const Entry = ({entry, accessStorage}: {entry: Journal, accessStorage: AccessSto
         case "text":
             return <div>{entry.text}</div>;
         case "audio":
-            return <div><audio src={accessStorage(entry.id, entry.entries[0].id)} controls /></div>;
+            return <div><audio src={accessStorage(entry.clientId, entry.id, entry.entries[0].id)} controls /></div>;
         case "media":
             return <div>
                 <div>
@@ -40,9 +40,9 @@ const Entry = ({entry, accessStorage}: {entry: Journal, accessStorage: AccessSto
     }
 };
 
-type AccessStorage = (journalId: number, entryId: number) => string;
+type AccessStorage = (clientId: number, journalId: number, entryId: number) => string;
 
-const EntryRow = ({entry, accessStorage}: {accessStorage: AccessStorage, entry: Journal}) => {
+export const EntryRow = ({entry, accessStorage}: {accessStorage: AccessStorage, entry: Journal}) => {
     return <div style={{borderBottom: '1px #eee solid', marginBottom: '6px'}}>
         <Entry entry={entry} accessStorage={accessStorage} />
         <div style={{fontSize: 'small', textAlign: 'right'}}>{entry.createdAt.toLocaleString()}</div>
@@ -52,7 +52,7 @@ const EntryRow = ({entry, accessStorage}: {accessStorage: AccessStorage, entry: 
 const ClientView = wrap(({group, client}: Props) => {
     const urlBuilder = useUrlBuilder();
 
-    function accessStorage(journalId: number, entryId: number) {
+    function accessStorage(_clientId: number, journalId: number, entryId: number) {
         return urlBuilder.build(`journal/${journalId}/entry/${entryId}/raw`);
     }
 

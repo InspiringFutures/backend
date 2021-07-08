@@ -26,6 +26,7 @@ import { Group } from '../model/group.model';
 import { GroupService } from '../service/group.service';
 import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
 import { extractAnswer, formatDatetime, UnpackedQuestion, unpackQuestions } from '../util/survey';
+import { Journal } from '../model/journal.model';
 
 function parseDateOrNull(date: string, endOfDay: boolean) {
     return date && date !== '' ? new Date(`${date}${endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'}`) : null;
@@ -44,6 +45,8 @@ export class SurveyController {
         private readonly groupService: GroupService,
         @InjectModel(SurveyAllocation)
         private surveyAllocationModel: typeof SurveyAllocation,
+        @InjectModel(Journal)
+        private journalModel: typeof Journal,
     ) {}
 
     @Post()
@@ -214,11 +217,23 @@ export class SurveyController {
         // Get group members
         const clients = await group.$get('clients');
 
+        // Get journal answers
+        const allJournals = await this.journalModel.findAll({where: {answerId: allocation.answers.map(a => a.id)}, include: ["entries"]});
+        const journals: {[answerId: string]: {[questionId: string]: Journal[]}} = {};
+        allJournals.forEach((journal) => {
+            const answerId = journal.answerId;
+            const journalAnswer = journals[answerId] ?? (journals[answerId] = {});
+            const [questionId] = journal.clientJournalId.split('-', 1);
+            const journalQuestion = journalAnswer[questionId] ?? (journalAnswer[questionId] = []);
+            journalQuestion.push(journal);
+        });
+
         // Render
         return {
             group,
             clients,
             allocation,
+            journals,
             //answers: allocation.answers,
         };
     }
