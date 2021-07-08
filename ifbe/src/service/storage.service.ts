@@ -30,6 +30,8 @@ export class StorageService{
         return multerS3({
             s3: this.s3,
             bucket: this.config.container,
+            contentType: multerS3.AUTO_CONTENT_TYPE,
+            contentDisposition: 'inline',
             metadata: function (req, file, cb) {
                 // CHECKME: These must align with ClientController#uploadMedia
                 const metadata: {clientId: string, journalId: string, xref?: string} = {clientId: req.params.clientId, journalId: req.params.journalId};

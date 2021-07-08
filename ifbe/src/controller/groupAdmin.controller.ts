@@ -68,7 +68,7 @@ export class GroupAdminController {
         const group = await this.hasGroupAccess(groupId, AccessLevel.view);
         const client = await this.groupService.getClientInGroup(group, clientId);
         const url = await this.journalService.getMediaUrl(client, journalId, entryId);
-        response.redirect(301, url);
+        response.redirect(303, url);
     }
 
     @Page('registrationSheet')

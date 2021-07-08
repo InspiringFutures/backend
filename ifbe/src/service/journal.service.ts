@@ -141,7 +141,9 @@ export class JournalService {
             console.log(journal, journal.entries, journalEntryId);
             throw new NotFoundException("Unknown journal entry");
         }
-
+        if (!entry.storageUrl) {
+            throw new NotFoundException(`No media stored for journal ${journalId} entry ${journalEntryId}`);
+        }
         return await this.storageService.getSignedUrl(entry.storageUrl);
     }
 
