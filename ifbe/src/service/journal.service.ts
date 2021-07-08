@@ -1,13 +1,11 @@
 import { InjectModel } from "@nestjs/sequelize";
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Writable } from "stream";
 
 import { Client } from "../model/client.model";
 import { Take } from "../util/types";
 import { Journal } from "../model/journal.model";
 import { JournalEntry } from "../model/journalEntry.model";
 import { StorageService } from "./storage.service";
-import { Model } from 'sequelize-typescript';
 
 export type PhotoContent = {type: 'photo'; url: string};
 export type VideoContent = {type: 'video'; url: string};
