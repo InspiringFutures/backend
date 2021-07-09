@@ -245,11 +245,15 @@ export class ClientController {
     }
 
     private async extractNewClientDTO(client: Client, group: Group) {
-        const initialSurveyAllocation = await group.$get('initialSurvey', {include: ["survey"]});
+        let initialSurveyAllocation = await group.$get('initialSurvey', {include: ["survey"]});
         let answer: Answer | undefined;
 
         if (initialSurveyAllocation) {
             [answer] = await this.answerModel.findOrCreate({where: {clientId: client.id, surveyAllocationId: initialSurveyAllocation.id}});
+        }
+
+        if (answer?.answer?.complete) {
+            initialSurveyAllocation = null;
         }
 
         return {
