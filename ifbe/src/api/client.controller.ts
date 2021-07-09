@@ -24,7 +24,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Answer } from '../model/answer.model';
 import { SurveyContent } from '../model/SurveyContent';
 
-function extractCheckClientDTO(client: Client) {
+export function extractCheckClientDTO(client: Client) {
     return {
         participantID: client.participantID,
     };

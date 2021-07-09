@@ -1,15 +1,61 @@
 import { InjectModel } from '@nestjs/sequelize';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 import { Group } from '../model/group.model';
 import { Client, ClientStatus } from '../model/client.model';
 import { Token, TokenType } from '../model/token.model';
 import { GroupService } from './group.service';
 import { Journal } from '../model/journal.model';
-import { getAll } from '../util/functional';
 
 const ONE_DAY = 1000 * 60 * 60 * 24;
+
+// Bech32 without complex checksum
+const ALPHABET = 'QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L';
+const ALPHABET_MAP = {};
+for (let z = 0; z < ALPHABET.length; z++) {
+    const x = ALPHABET.charAt(z);
+    ALPHABET_MAP[x] = z;
+}
+
+function generateCheckForToken(rest: {reduce: <T>(f: (acc: T, entry: number) => T, initial: T) => T}) {
+    return rest.reduce((acc, x) => {
+        return ((acc * 1057) ^ x) % 65521;
+    }, 1) & 31;
+}
+
+function makeToken() {
+    const fiveBitWords = crypto.randomBytes(18).map((x) => x & 31);
+    const check = generateCheckForToken(fiveBitWords);
+    return fiveBitWords.reduce((acc, n, index) => acc + (index % 5 === 4 ? '-' : '') + ALPHABET.charAt(n), 'R') + ALPHABET.charAt(check);
+}
+
+export function checkToken(token: string): string | false | undefined {
+    const trimmed = token.trim()
+        .replaceAll(/[^a-zA-Z0-9]/g, '')
+        .replaceAll(/[1iIl]/g, 'L')
+        .replaceAll(/[oO0]/g, '0')
+        .toUpperCase()
+    ;
+    if (trimmed.length !== 20) {
+        return;
+    }
+    if (trimmed[0] !== 'R') {
+        return;
+    }
+    const decoded = trimmed.substr(1).split('').map(char => ALPHABET_MAP[char]);
+    const last = decoded.pop();
+    const check = generateCheckForToken(decoded);
+    if (last !== check) {
+        return false;
+    }
+    const groups = [];
+    for (let i = 0; i < 4; i++) {
+        groups[i] = trimmed.substr(i * 5, 5);
+    }
+    return groups.join("-");
+}
 
 export class ClientService {
     constructor(@InjectModel(Group) private groupModel: typeof Group,
@@ -54,7 +100,7 @@ export class ClientService {
         await client.save();
 
         // Make a reset token and put it in the tokens table for them to login
-        const resetToken = uuidv4();
+        const resetToken = makeToken();
 
         return this.tokenModel.create({
             type: TokenType.reset,
