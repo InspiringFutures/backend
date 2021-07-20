@@ -10,6 +10,8 @@ export class AppMiddleware implements NestMiddleware {
         } else if (req.path.startsWith('/static/')) {
             // change the path to the correct html page path in your project
             res.sendFile(join(process.cwd(), '../iffe/build' + req.path));
+        } else if (req.path.startsWith('/.well-known/')) {
+            res.sendFile(join(process.cwd(), 'public' + req.path));
         } else {
             return next();
         }
