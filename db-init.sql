@@ -152,3 +152,4 @@ ALTER TABLE "Journals" ADD COLUMN "hidden" BOOLEAN NOT NULL DEFAULT 'f';
 ALTER TABLE "Clients" ADD COLUMN "pushToken" character varying null;
 
 ALTER TABLE "SurveyAllocations" ADD COLUMN "pushedAt" timestamp null;
+ALTER TABLE "SurveyAllocations" ADD COLUMN "dueAt" timestamp null;

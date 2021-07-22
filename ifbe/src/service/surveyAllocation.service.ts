@@ -38,7 +38,10 @@ export class SurveyAllocationService {
         // and have no pushedAt date
         const allocationsToPush = await this.surveyAllocationModel.findAll({
             where: {
-                [Op.or]: [{openAt: null}, {openAt: {[Op.gt]: fn('NOW')}}],
+                [Op.and]: [
+                    {[Op.or]: [{openAt: null}, {openAt: {[Op.lt]: fn('NOW')}}]},
+                    {[Op.or]: [{closeAt: null}, {closeAt: {[Op.gt]: fn('NOW')}}]},
+                ],
                 pushedAt: null,
             },
             limit: 1,

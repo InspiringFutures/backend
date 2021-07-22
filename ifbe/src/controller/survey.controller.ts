@@ -135,14 +135,17 @@ export class SurveyController {
     async addAllocation(@Param('id') surveyId,
                         @Body('type') type: SurveyAllocationType,
                         @Body('openAt') openAt,
+                        @Body('dueAt') dueAt,
                         @Body('closeAt') closeAt,
                         @Body('note') note: string,
                         @Body('groupId', ParseIntPipe) groupId: number) {
         if (type === 'initial') {
             openAt = null;
+            dueAt = null;
             closeAt = null;
         } else if (type === 'oneoff') {
             openAt = parseDateOrNull(openAt, false);
+            dueAt = parseDateOrNull(dueAt, true);
             closeAt = parseDateOrNull(closeAt, true);
         } else {
             throw new BadRequestException("Unknown allocation type");
@@ -152,7 +155,7 @@ export class SurveyController {
 
         const survey = await this.hasSurveyAccess(surveyId, AccessLevel.view);
         const group = await this.hasGroupAccess(groupId, AccessLevel.edit);
-        await this.surveyService.addAllocation(survey.id, group.id, type, openAt, closeAt, note, admin);
+        await this.surveyService.addAllocation(survey.id, group.id, type, openAt, dueAt, closeAt, note, admin);
         throw redirect('/survey/' + surveyId);
     }
 
@@ -161,6 +164,7 @@ export class SurveyController {
     async editAllocation(@Param('id', ParseIntPipe) surveyId: number,
                          @Param('allocationId', ParseIntPipe) allocationId:  number,
                          @Body('openAt') openAt,
+                         @Body('dueAt') dueAt,
                          @Body('closeAt') closeAt,
                          @Body('note') note: string) {
         const admin = this.userService.currentUser()!;
@@ -178,6 +182,7 @@ export class SurveyController {
         allocation.note = note;
         if (allocation.type === 'oneoff') {
             allocation.openAt = parseDateOrNull(openAt, false);
+            allocation.dueAt = parseDateOrNull(dueAt, true);
             allocation.closeAt = parseDateOrNull(closeAt, true);
         }
 

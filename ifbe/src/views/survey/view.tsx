@@ -38,6 +38,7 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
             </td>
             <td><textarea name="note" defaultValue={allocation.note} /></td>
             <td><input name="openAt" type="date" value={formatDate(allocation.openAt)} /></td>
+            <td><input name="dueAt" type="date" value={formatDate(allocation.dueAt)} /></td>
             <td><input name="closeAt" type="date" value={formatDate(allocation.closeAt)} /></td>
             <td>{allocation.creator.name}</td>
             <td><input type="submit" value="Save" /></td>
@@ -96,7 +97,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
     <h2>Allocated to the following groups</h2>
     <table>
         <tbody>
-        <tr><th>Group</th><th>Notes</th><th>Opens at</th><th>Closes at</th><th>Allocated by</th><th colSpan={3}>&nbsp;</th></tr>
+        <tr><th>Group</th><th>Notes</th><th>Opens at</th><th>Due at</th><th>Closes at</th><th>Allocated by</th><th colSpan={3}>&nbsp;</th></tr>
         {survey.allocations.filter(a => a.type !== 'initial').map(allocation =>
             <TimedAllocationRow key={allocation.id} allocation={allocation} />
         )}
@@ -110,6 +111,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
                 </select></td>
                 <td><textarea name="note" /></td>
                 <td><input name="openAt" type="date" min={now}  /></td>
+                <td><input name="dueAt" type="date" min={now}  /></td>
                 <td><input name="closeAt" type="date" min={now} /></td>
                 <td colSpan={3}><input type="submit" value="Add" /></td>
             </form>

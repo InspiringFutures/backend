@@ -38,6 +38,10 @@ export class SurveyAllocation extends Model<SurveyAllocation> {
 
     @AllowNull(true)
     @Column
+    dueAt: Date|null;
+
+    @AllowNull(true)
+    @Column
     closeAt: Date|null;
 
     @AllowNull(true)

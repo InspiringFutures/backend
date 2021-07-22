@@ -108,11 +108,12 @@ const GroupView = wrap(({group, allocations}: Props) => {
     </form>}
     <h2>Surveys allocated to this group</h2>
     {oneoffAllocations.length > 0 ? <table>
-        <tr><th>Survey</th><th>Notes</th><th>Opens at</th><th>Closes at</th><th>Allocated by</th><th>&nbsp;</th></tr>
+        <tr><th>Survey</th><th>Notes</th><th>Opens at</th><th>Due at</th><th>Closes at</th><th>Allocated by</th><th>&nbsp;</th></tr>
         {oneoffAllocations.map(allocation => <tr>
             <td>{surveyLink(allocation)}</td>
             <td>{allocation.note}</td>
             <td>{formatDatetime(allocation.openAt)}</td>
+            <td>{formatDatetime(allocation.dueAt)}</td>
             <td>{formatDatetime(allocation.closeAt)}</td>
             <td>{allocation.creator.name}</td>
             <td>{surveyResultsLink(allocation)}</td>

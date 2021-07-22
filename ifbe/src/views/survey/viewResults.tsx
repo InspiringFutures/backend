@@ -44,6 +44,7 @@ const SurveyResultsView = wrap(({group, clients, allocation, journals}: Props) =
     <p><b>Group:</b> {group.name}</p>
     <p><b>Survey:</b> {allocation.survey.name}</p>
     {allocation.openAt && <p><b>Open at:</b> {allocation.openAt.toLocaleDateString()}</p>}
+    {allocation.dueAt && <p><b>Due at:</b> {allocation.openAt.toLocaleDateString()}</p>}
     {allocation.closeAt && <p><b>Close at:</b> {allocation.closeAt.toLocaleDateString()}</p>}
     <p><a href={urlBuilder.build(".csv")}>Download results</a></p>
     <table cellSpacing={0} style={{borderCollapse: 'collapse', padding: '4px', borderLeft: box.borderBottom, borderBottom: box.borderBottom}}>

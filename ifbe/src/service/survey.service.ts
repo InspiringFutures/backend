@@ -86,7 +86,7 @@ export class SurveyService {
         }
     }
 
-    async addAllocation(surveyId:number, groupId: number, type: SurveyAllocationType, openAt: Date | null, closeAt: Date | null, note: string, user: User) {
-        await this.surveyAllocationModel.create({type, note, openAt, closeAt, groupId, surveyId, creatorId: user.id});
+    async addAllocation(surveyId:number, groupId: number, type: SurveyAllocationType, openAt: Date | null, dueAt: Date | null, closeAt: Date | null, note: string, user: User) {
+        await this.surveyAllocationModel.create({type, note, openAt, dueAt, closeAt, groupId, surveyId, creatorId: user.id});
     }
 }

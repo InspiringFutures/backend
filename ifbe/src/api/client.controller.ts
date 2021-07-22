@@ -154,7 +154,8 @@ export class ClientController {
         // Filter active surveys
         const now = new Date();
         const activeSurveys = surveys.filter(allocation => {
-            return allocation.openAt === null || now >= allocation.openAt;
+            return (allocation.openAt === null || now >= allocation.openAt)
+                && (allocation.closeAt === null || now <= allocation.closeAt);
 
         });
 
@@ -192,6 +193,7 @@ export class ClientController {
             results.push({
                 id: '' + answer.id,
                 surveyAllocationId: allocation.id,
+                dueAt: allocation.dueAt,
                 closeAt: allocation.closeAt,
                 content: allocation.survey.content.content,
             });
