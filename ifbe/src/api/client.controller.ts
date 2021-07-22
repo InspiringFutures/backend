@@ -139,6 +139,13 @@ export class ClientController {
         return this.journalService.updateEntry(journal, url, upload);
     }
 
+    @Post(':clientId/registerPushToken')
+    async registerPushToken(@Param('clientId') clientId: number, @Headers('X-Token') token: string, @Body('token') pushToken: string) {
+        const client = await this.authenticateClient(clientId, token);
+        client.pushToken = pushToken;
+        return client.save();
+    }
+
     @Get(':clientId/incompleteSurveys')
     async getIncompleteSurveys(@Param('clientId') clientId: number, @Headers('X-Token') token: string) {
         const client = await this.authenticateClient(clientId, token);
@@ -184,6 +191,7 @@ export class ClientController {
             }
             results.push({
                 id: '' + answer.id,
+                surveyAllocationId: allocation.id,
                 closeAt: allocation.closeAt,
                 content: allocation.survey.content.content,
             });

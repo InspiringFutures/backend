@@ -148,3 +148,7 @@ ALTER TABLE "Journals"
     ADD CONSTRAINT "Journals_answerId_fkey"  FOREIGN KEY ("answerId") REFERENCES public."Answers"(id);
 
 ALTER TABLE "Journals" ADD COLUMN "hidden" BOOLEAN NOT NULL DEFAULT 'f';
+
+ALTER TABLE "Clients" ADD COLUMN "pushToken" character varying null;
+
+ALTER TABLE "SurveyAllocations" ADD COLUMN "pushedAt" timestamp null;

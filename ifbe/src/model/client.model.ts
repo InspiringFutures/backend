@@ -31,6 +31,8 @@ export class Client extends Model<Client> {
     @Column(DataTypes.ENUM('added', 'registered', 'suspended', 'deleted'))
     status: ClientStatus;
 
+    @Column
+    pushToken: string|null;
 
     @ForeignKey(() => Group)
     @AllowNull(false)

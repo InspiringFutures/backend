@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { MulterModule } from '@nestjs/platform-express';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { GroupController } from './api/group.controller';
 import { Group } from './model/group.model';
@@ -31,6 +32,8 @@ import { SurveyController } from "./controller/survey.controller";
 import { GroupAdminController } from "./controller/groupAdmin.controller";
 import { SurveyAllocation } from './model/surveyAllocation.model';
 import { Answer } from './model/answer.model';
+import { PushNotificationService } from './service/pushNotification.service';
+import { SurveyAllocationService } from './service/surveyAllocation.service';
 
 // Fix bug with parsing timestamps from Postgres as non-local time
 require('pg').types.setTypeParser(1114, function(stringValue) {
@@ -56,6 +59,7 @@ class StorageModule {}
                                       models: MODELS,
                                     }),
       SequelizeModule.forFeature(MODELS),
+      ScheduleModule.forRoot(),
       StorageModule,
       MulterModule.registerAsync({
           imports: [StorageModule],
@@ -70,7 +74,7 @@ class StorageModule {}
       }),
   ],
   controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController, QRController, SurveyController, GroupAdminController],
-  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider, ClientService, SurveyService],
+  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider, ClientService, SurveyService, PushNotificationService, SurveyAllocationService],
 })
 export class AppModule {
     configure(consumer: MiddlewareConsumer) {

@@ -40,6 +40,10 @@ export class SurveyAllocation extends Model<SurveyAllocation> {
     @Column
     closeAt: Date|null;
 
+    @AllowNull(true)
+    @Column
+    pushedAt: Date|null;
+
     @ForeignKey(() => Group)
     @AllowNull(false)
     @Column

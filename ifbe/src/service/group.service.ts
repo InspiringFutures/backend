@@ -117,4 +117,8 @@ export class GroupService {
     async getOneOffSurveysForGroup(groupId: number) {
         return this.surveyAllocationModel.findAll({where: {groupId, type: 'oneoff'}, include: ["survey"]});
     }
+
+    async getOneOffSurveyForGroup(groupId: number, surveyId: number) {
+        return this.surveyAllocationModel.findAll({where: {groupId, type: 'oneoff', surveyId}, include: ["survey"]});
+    }
 }
