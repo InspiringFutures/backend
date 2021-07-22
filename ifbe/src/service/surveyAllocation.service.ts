@@ -1,18 +1,14 @@
+import { Injectable } from '@nestjs/common';
+import { Interval, SchedulerRegistry, Timeout } from '@nestjs/schedule';
 import { InjectModel } from "@nestjs/sequelize";
 
-import { Admin, AdminLevel } from "../model/admin.model";
-import { User } from "./user.service";
-import { AccessLevel } from "../model/accessLevels";
-import { Survey } from "../model/survey.model";
-import { SurveyPermission } from "../model/surveyPermission.model";
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { getOrElse } from "../util/functional";
-import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
-import { Interval, SchedulerRegistry, Timeout } from '@nestjs/schedule';
 import { fn, Op } from 'sequelize';
-import { Where } from 'sequelize/types/lib/utils';
+
+import { Survey } from "../model/survey.model";
+import { SurveyAllocation } from '../model/surveyAllocation.model';
 import { Client } from '../model/client.model';
 import { PushNotificationService } from './pushNotification.service';
+import { Answer } from '../model/answer.model';
 
 const PUSH_NOTIFICATIONS_JOB = 'pushNotifications';
 const PUSH_NOTIFICATIONS_DEFAULT_DELAY = 5000;
@@ -24,6 +20,7 @@ export class SurveyAllocationService {
                 @InjectModel(Survey) private surveyModel: typeof Survey,
                 @InjectModel(SurveyAllocation) private surveyAllocationModel: typeof SurveyAllocation,
                 @InjectModel(Client) private clientModel: typeof Client,
+                @InjectModel(Answer) private answerModel: typeof Answer,
     ) {}
 
     @Interval('pushNotificationsWatchdog', 60000)
@@ -56,8 +53,13 @@ export class SurveyAllocationService {
     }
 
     private async handleAllocation(allocation: SurveyAllocation) {
-        // Get the clients for each allocation that have a pushToken
+        // Get the clients for allocation that have a pushToken...
         const clients = await this.clientModel.findAll({where: {groupId: allocation.groupId, pushToken: { [Op.ne]: null }}});
+
+        // ...and haven't answered
+        const answers = await this.answerModel.findAll({where: {surveyAllocationId: allocation.id}});
+        const answeredClientIds = new Set(answers.filter(answer => answer.answer.complete).map(answer => answer.clientId));
+        const unansweredClients = clients.filter(client => !answeredClientIds.has(client.id));
 
         const notification = {
             title: 'New survey',
@@ -70,16 +72,16 @@ export class SurveyAllocationService {
             },
         };
 
-        const result = await this.pushNotificationService.send(clients.map((client) => client.pushToken), notification);
+        const result = await this.pushNotificationService.send(unansweredClients.map((client) => client.pushToken), notification);
 
         if (result.some((r) => r.success > 0)) {
             // Log this was done
             allocation.pushedAt = new Date();
             await allocation.save();
-            console.log('Push done for', allocation.id, JSON.stringify(result, null, 2), clients.map(c => [c.id, c.pushToken]));
+            console.log('Push done for', allocation.id, JSON.stringify(result, null, 2), unansweredClients.map(c => [c.id, c.pushToken]));
             return true;
         } else {
-            console.log('Push problem for', allocation.id, JSON.stringify(result, null, 2), clients.map(c => [c.id, c.pushToken]));
+            console.log('Push problem for', allocation.id, JSON.stringify(result, null, 2), unansweredClients.map(c => [c.id, c.pushToken]));
             console.log('Push will be retried for', allocation.id);
             return false;
         }

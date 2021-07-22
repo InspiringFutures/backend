@@ -8,7 +8,7 @@ const config = {
             keyId: process.env.APNS_KEY_ID,
             teamId: process.env.APNS_TEAM_ID,
         },
-        production: process.env.NODE_ENV !== "development",
+        production: process.env.DB_NAME !== "dev",
     },
     gcm: {
         id: process.env.FCM_API_KEY,
