@@ -11,7 +11,7 @@ import { PushNotificationService } from './pushNotification.service';
 import { Answer } from '../model/answer.model';
 
 const PUSH_NOTIFICATIONS_JOB = 'pushNotifications';
-const PUSH_NOTIFICATIONS_DEFAULT_DELAY = 5000;
+const PUSH_NOTIFICATIONS_DEFAULT_DELAY = 60 * 1000;
 
 @Injectable()
 export class SurveyAllocationService {
@@ -23,7 +23,7 @@ export class SurveyAllocationService {
                 @InjectModel(Answer) private answerModel: typeof Answer,
     ) {}
 
-    @Interval('pushNotificationsWatchdog', 60000)
+    @Interval('pushNotificationsWatchdog', 60 * 15 * 1000)
     pushNotificationsWatchdog() {
         if (!this.schedulerRegistry.doesExists('timeout', PUSH_NOTIFICATIONS_JOB)) {
             console.log("WATCHDOG had to restart ", PUSH_NOTIFICATIONS_JOB);
@@ -33,18 +33,27 @@ export class SurveyAllocationService {
 
     @Timeout(PUSH_NOTIFICATIONS_JOB, PUSH_NOTIFICATIONS_DEFAULT_DELAY)
     async handlePushes() {
-        // Get the list of surveyAllocations that are
-        // start or have no start date
-        // and have no pushedAt date
+        // Get the list of surveyAllocations that:
+        //   started or have no start date;
+        //   not ended or have no end date; and
+        //   have
+        //     no pushedAt date; or
+        //     a pushedAt date before the dueAt date, a dueAt date, and a pushedAt date over 24 hours ago (for rate-limiting)
+        const nowMinus24hours = new Date();
+        nowMinus24hours.setDate(nowMinus24hours.getDate() - 1);
         const allocationsToPush = await this.surveyAllocationModel.findAll({
             where: {
                 [Op.and]: [
                     {[Op.or]: [{openAt: null}, {openAt: {[Op.lt]: fn('NOW')}}]},
                     {[Op.or]: [{closeAt: null}, {closeAt: {[Op.gt]: fn('NOW')}}]},
+                    {[Op.or]: [{pushedAt: null}, {[Op.and]: [
+                        {pushedAt: {[Op.lt]: {[Op.col]: 'dueAt'}}},
+                        {dueAt: {[Op.lt]: fn('NOW')}},
+                        {pushedAt: {[Op.lt]: nowMinus24hours}},
+                    ]}]},
                 ],
-                pushedAt: null,
             },
-            limit: 1,
+            limit: 100,
         });
 
         await Promise.all(allocationsToPush.map((allocation) => this.handleAllocation(allocation)));
@@ -64,8 +73,10 @@ export class SurveyAllocationService {
         const answeredClientIds = new Set(answers.filter(answer => answer.answer.complete).map(answer => answer.clientId));
         const unansweredClients = clients.filter(client => !answeredClientIds.has(client.id));
 
+        const reminder = allocation.dueAt && allocation.dueAt.getTime() < new Date().getTime();
+
         const notification = {
-            title: 'New survey',
+            title: reminder ? 'Survey reminder' : 'New survey',
             body: 'Please do this survey for Inspiring Futures',
             custom: {
                 customData: {
@@ -77,7 +88,7 @@ export class SurveyAllocationService {
 
         const result = await this.pushNotificationService.send(unansweredClients.map((client) => client.pushToken), notification);
 
-        if (result.some((r) => r.success > 0)) {
+        if (result.some((r) => r.success > 0) || result.every((r) => r.failure === 0)) {
             // Log this was done
             allocation.pushedAt = new Date();
             await allocation.save();
