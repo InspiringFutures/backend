@@ -32,7 +32,7 @@ export class StorageService{
             bucket: this.config.container,
             contentType: multerS3.AUTO_CONTENT_TYPE,
             contentDisposition: 'inline',
-            metadata: function (req, file, cb) {
+            metadata: function (req: any, file, cb) {
                 // CHECKME: These must align with ClientController#uploadMedia
                 const metadata: {clientId: string, journalId: string, xref?: string} = {clientId: req.params.clientId, journalId: req.params.journalId};
                 // Also store a xref from the client which is not trusted but might be useful if available
@@ -42,8 +42,8 @@ export class StorageService{
                 cb(null, metadata);
             },
             key: function (req, file, cb) {
-                cb(null, uuidv4());
-            }
+                cb(null, 'incoming/' + uuidv4());
+            },
         });
     }
 
@@ -57,6 +57,16 @@ export class StorageService{
 
     async _test_listing() {
         return (await this.s3.listObjects({Bucket: this.config.container}).promise()).Contents;
+    }
+
+    async rename(id: string, to: string) {
+        const result = await this.s3.copyObject({Bucket: this.config.container, CopySource: `${this.config.container}/${id}`, Key: to}).promise();
+        if (!result.$response.error) {
+            await this.s3.deleteObject({Bucket: this.config.container, Key: id}).promise();
+            return;
+        } else {
+            throw new Error(`Error renaming ${id} to ${to}, ${result.$response.error.message}`);
+        }
     }
 }
 

@@ -6,6 +6,10 @@ import { Take } from "../util/types";
 import { Journal } from "../model/journal.model";
 import { JournalEntry } from "../model/journalEntry.model";
 import { StorageService } from "./storage.service";
+import { Group } from '../model/group.model';
+import moment from "moment";
+import { Answer } from '../model/answer.model';
+import { Content, Question } from '../model/SurveyContent';
 
 export type PhotoContent = {type: 'photo'; url: string};
 export type VideoContent = {type: 'video'; url: string};
@@ -35,6 +39,10 @@ interface StorageItem {
 
 function extractJournalText(journal: JournalContents): string {
     return journal.type === 'text' ? journal.text : journal.type === 'media' ? journal.caption : '' + journal.length;
+}
+
+function formatDate(date: Date) {
+    return moment(date).format('YYYY-MM-DD HH:mm:ss');
 }
 
 export class JournalService {
@@ -145,7 +153,7 @@ export class JournalService {
         return await this.storageService.getSignedUrl(entry.storageUrl);
     }
 
-    async updateEntry(journal: Journal, url: string, upload: StorageItem) {
+    async updateEntry(group: Group, client: Client, journal: Journal, url: string, upload: StorageItem) {
         // Find the entry with the right URL(i.e. clientEntryId)
         const entry = journal.entries.find(entry => entry.clientEntryId === url);
         if (!entry) {
@@ -153,8 +161,36 @@ export class JournalService {
             throw new NotFoundException("Unknown journal entry");
         }
 
-        // Store the uploaded id in the entry
-        entry.storageUrl = upload.key;
+        const type = entry.type;
+        const extension = type === 'photo' ? 'jpg' :'mp4'; // TODO: look up mime type of content-type
+        const entryFilename = `${type} ${entry.sequence}.${extension}`;
+
+        let name;
+        if (journal.answerId === null) {
+            const dateString = formatDate(journal.createdAt);
+            name = `Journals/${group.name} (${group.code})/${client.participantID}/${dateString} (${journal.id})/${entryFilename}`;
+        } else {
+            const answer = await journal.$get('answer', {include: [{association: 'surveyAllocation', include: ['survey']}]});
+            const allocation = answer.surveyAllocation;
+            const survey = allocation.survey;
+            let allocationName = `${group.name} (${group.code})`;
+            if (allocation.openAt) {
+                allocationName += ` - ${formatDate(allocation.openAt)}`;
+            }
+            if (allocation.closeAt) {
+                allocationName += ` - ${formatDate(allocation.closeAt)}`;
+            }
+            const [questionId] = journal.clientJournalId.split('-', 1);
+            const questions = survey.content.content as Content[];
+            const questionIndex = questions.findIndex((q) => q.id === questionId);
+            const question = questions[questionIndex] as Question;
+            const questionTitleStripped = `${question.title.substr(0, 32).replace(/[^a-zA-Z0-9 ]*/, '_').replace(/^_|_$/, '')}`;
+            const answerName = `${question.questionNumber ? `${question.questionNumber}` : `${questionIndex + 1}`} - ${questionTitleStripped}`;
+            name = `Surveys/${survey.name} (${survey.id})/${allocationName}/${answerName}/${client.participantID}/${entryFilename}`;
+        }
+
+        await this.storageService.rename(upload.key, name);
+        entry.storageUrl = name;
 
         return entry.save();
     }

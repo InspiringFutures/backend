@@ -9,7 +9,6 @@ import {
     UnpackedQuestion,
     unpackQuestions,
 } from '../../util/survey';
-import { JournalEntry } from '../../model/journalEntry.model';
 import { EntryRow } from '../admin/client';
 import { Journal } from '../../model/journal.model';
 
@@ -81,7 +80,6 @@ const SurveyResultsView = wrap(({group, clients, allocation, journals}: Props) =
                             if (q.type === 'JournalQuestion') {
                                 // Get journals
                                 const journalList = journals?.[answerSet.id]?.[q.id] ?? [];
-                                console.log(journalList);
                                 return <td key={q.id} style={major}>{
                                     journalList.map((journal: Journal) => <EntryRow key={journal.id} accessStorage={accessStorage} entry={journal} />)
                                 }</td>;

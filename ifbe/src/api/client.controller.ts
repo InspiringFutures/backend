@@ -23,6 +23,7 @@ import { Group } from '../model/group.model';
 import { InjectModel } from '@nestjs/sequelize';
 import { Answer } from '../model/answer.model';
 import { SurveyContent } from '../model/SurveyContent';
+import { StorageService } from '../service/storage.service';
 
 export function extractCheckClientDTO(client: Client) {
     return {
@@ -39,6 +40,7 @@ export class ClientController {
         private groupService: GroupService,
         @InjectModel(Answer)
         private answerModel: typeof Answer,
+        private storageService: StorageService,
 ) {}
 
     @Post('check')
@@ -133,10 +135,17 @@ export class ClientController {
     @Post(':clientId/journal/:journalId/media')
     @UseInterceptors(FileInterceptor('upload'))
     async uploadMedia(@Param('clientId') clientId: number, @Param('journalId') journalId: number, @Headers('X-Token') token: string, @UploadedFile() upload, @Body('url') url: string) {
-        const client = await this.authenticateClient(clientId, token);
-        const journal = await this.journalService.get(client, journalId);
+        try {
+            const client = await this.authenticateClient(clientId, token);
+            const journal = await this.journalService.get(client, journalId);
+            const group = await client.$get('group');
 
-        return this.journalService.updateEntry(journal, url, upload);
+            return this.journalService.updateEntry(group, client, journal, url, upload);
+        } catch (e) {
+            // If there is any error, delete the entry
+            await this.storageService.delete(upload.key);
+            throw e;
+        }
     }
 
     @Post(':clientId/registerPushToken')

@@ -46,7 +46,7 @@ export class Journal extends Model<Journal> {
     answerId: number | null;
 
     @BelongsTo(() => Answer)
-    answer: Client | null;
+    answer: Answer | null;
 
     @HasMany(() => JournalEntry)
     entries: JournalEntry[];
