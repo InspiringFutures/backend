@@ -1,5 +1,6 @@
 import { InjectModel } from "@nestjs/sequelize";
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {extension as mimeToExtension} from 'mime-types';
 
 import { Client } from "../model/client.model";
 import { Take } from "../util/types";
@@ -8,7 +9,6 @@ import { JournalEntry } from "../model/journalEntry.model";
 import { StorageService } from "./storage.service";
 import { Group } from '../model/group.model';
 import moment from "moment";
-import { Answer } from '../model/answer.model';
 import { Content, Question } from '../model/SurveyContent';
 
 export type PhotoContent = {type: 'photo'; url: string};
@@ -162,7 +162,10 @@ export class JournalService {
         }
 
         const type = entry.type;
-        const extension = type === 'photo' ? 'jpg' :'mp4'; // TODO: look up mime type of content-type
+        const contentType = await this.storageService.getContentType(upload.key);
+        const extensionFromContentType = mimeToExtension(contentType);
+        const extension = extensionFromContentType && extensionFromContentType !== 'bin' ? extensionFromContentType :
+            type === 'photo' ? 'jpg' :'mp4';
         const entryFilename = `${type} ${entry.sequence}.${extension}`;
 
         let name;

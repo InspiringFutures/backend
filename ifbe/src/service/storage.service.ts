@@ -68,6 +68,11 @@ export class StorageService{
             throw new Error(`Error renaming ${id} to ${to}, ${result.$response.error.message}`);
         }
     }
+
+    async getContentType(id: string) {
+        const result = await this.s3.headObject({Bucket: this.config.container, Key: id}).promise();
+        return result.ContentType;
+    }
 }
 
 export const StorageServiceProvider = {
