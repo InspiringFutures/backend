@@ -24,6 +24,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Answer } from '../model/answer.model';
 import { SurveyContent } from '../model/SurveyContent';
 import { StorageService } from '../service/storage.service';
+import { SurveyAllocation } from '../model/surveyAllocation.model';
 
 export function extractCheckClientDTO(client: Client) {
     return {
@@ -214,7 +215,7 @@ export class ClientController {
     @Post(':clientId/answer/:answerId')
     async answerSurvey(@Param('clientId') clientId: number, @Param('answerId') answerId: number, @Headers('X-Token') token: string, @Body() answers: any, @Res() res) {
         const client = await this.authenticateClient(clientId, token);
-        const answer = await this.answerModel.findByPk(answerId, {include: ["surveyAllocation"]});
+        const answer = await this.answerModel.findByPk(answerId, {include: [{model: SurveyAllocation, paranoid: false}]});
         if (answer.clientId !== client.id) {
             throw new ForbiddenException("Answer doesn't belong to this client.");
         }
@@ -226,7 +227,7 @@ export class ClientController {
             answers,
         };
 
-        const survey = await answer.surveyAllocation.$get('survey');
+        const survey = await answer.surveyAllocation.$get('survey', {paranoid: false}); // Allow deleted answers to be submitted
         const surveyContent: SurveyContent[] = survey.content.content;
         // Process answers to extract journals
         const journalAnswers: [string, ClientJournalEntry[]][] = Object.keys(answers).filter((questionId) => {

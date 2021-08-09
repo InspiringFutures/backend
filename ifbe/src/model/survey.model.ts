@@ -1,5 +1,14 @@
-import { BelongsTo, BelongsToMany, Column, HasMany, Model, Table } from 'sequelize-typescript';
-import { DataTypes } from 'sequelize';
+import {
+    AfterBulkDestroy,
+    AfterDestroy,
+    BelongsTo,
+    BelongsToMany,
+    Column,
+    HasMany,
+    Model,
+    Table,
+} from 'sequelize-typescript';
+import { DataTypes, DestroyOptions } from 'sequelize';
 
 import { Admin } from "./admin.model";
 import { SurveyPermission } from "./surveyPermission.model";
@@ -10,7 +19,9 @@ import { Group } from './group.model';
 type AdminWithPermission = Admin & { SurveyPermission: SurveyPermission };
 type GroupWithAllocation = Group & { SurveyAllocation: SurveyAllocation };
 
-@Table
+@Table({
+    paranoid: true,
+})
 export class Survey extends Model<Survey> {
     @Column
     name: string;
@@ -38,4 +49,9 @@ export class Survey extends Model<Survey> {
 
     @HasMany(() => SurveyAllocation)
     allocations: SurveyAllocation[];
+
+    @AfterDestroy
+    static async onDestroyCascadeAllocations(survey: Survey) {
+        await SurveyAllocation.destroy({where: {surveyId: survey.id}});
+    }
 }

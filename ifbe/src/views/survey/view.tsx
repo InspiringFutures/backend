@@ -87,9 +87,15 @@ const SurveyView = wrap(({groups, survey}: Props) => {
     const url = urlBuilder.build('allocation');
 
     return (<body>
-    <h1>Survey: {survey.name}</h1>
+    <form method="POST" action={urlBuilder.build()}>
+        <h1>Survey: <input style={{font: 'inherit', border: '1px solid #ccc'}} name="name" value={survey.name} /> &nbsp; <input type="submit" value="Save" /></h1>
+    </form>
     <p><a href="/admin">Back to admin area</a></p>
-    {owner && <p>You are an owner of this survey.</p>}
+    {owner && <p>You are an owner of this survey.<br />
+        <form style={{marginLeft: '1em'}} method="POST" action={urlBuilder.build('delete')}>
+          <p>Deallocate and delete this survey <input type="submit" value="Delete survey" /></p>
+        </form>
+    </p>}
     <p>Last modified by {survey.updater.name} at {survey.updatedAt.toLocaleString()}.</p>
     {editable && <p><a href={urlBuilder.build('edit')}>Edit survey</a></p>}
     {locked && <p><em>This survey has been allocated and therefore can no longer be edited.</em></p>}

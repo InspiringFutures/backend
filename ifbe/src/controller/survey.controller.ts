@@ -91,6 +91,32 @@ export class SurveyController {
         };
     }
 
+    @Post(':id')
+    @NeedsAdmin
+    async edit(@Param('id') surveyId, @Body('name') name: string) {
+        const survey = await this.hasSurveyAccess(surveyId, AccessLevel.edit);
+
+        survey.name = name;
+        await survey.save();
+        throw redirect('/survey/' + surveyId);
+    }
+
+    @Post(':id/delete')
+    @Render('survey/deleteConfirmation')
+    @NeedsAdmin
+    async delete(@Param('id') surveyId, @Body('confirmed') confirmed: boolean) {
+        const survey = await this.hasSurveyAccess(surveyId, AccessLevel.owner);
+
+        if (confirmed) {
+            await survey.destroy();
+            throw redirect('/');
+        }
+
+        return {
+            survey: survey.get(),
+        };
+    }
+
     @Get(':id/content')
     @NeedsAdmin
     async getContent(@Param('id') surveyId) {

@@ -29,7 +29,7 @@ export function wrap<T>(WrappedComponent: React.ComponentType<T>) {
 
 export class UrlBuilder {
     constructor(private readonly url: string) {}
-    build(path: string, params?: {[key: string]: string}) {
+    build(path?: string, params?: {[key: string]: string}) {
         const url = this.generateUrl(path, params);
         return url.pathname + url.search;
     }
@@ -39,9 +39,11 @@ export class UrlBuilder {
         return url.href;
     }
 
-    private generateUrl(path: string, params: { [p: string]: string }) {
+    private generateUrl(path: string | undefined, params: { [p: string]: string }) {
         const url = new URL(this.url);
-        if (path[0] === '/') {
+        if (path === undefined) {
+
+        } else if (path[0] === '/') {
             url.pathname = path;
         } else if (path[0] === '.') {
             url.pathname += path;

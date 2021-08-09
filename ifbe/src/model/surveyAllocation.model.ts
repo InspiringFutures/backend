@@ -18,7 +18,9 @@ import { Answer } from './answer.model';
 
 export type SurveyAllocationType = 'oneoff' | 'initial';
 
-@Table
+@Table({
+    paranoid: true,
+})
 export class SurveyAllocation extends Model<SurveyAllocation> {
     @PrimaryKey
     @AutoIncrement
