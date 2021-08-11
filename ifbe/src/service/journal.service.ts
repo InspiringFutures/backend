@@ -10,6 +10,8 @@ import { StorageService } from "./storage.service";
 import { Group } from '../model/group.model';
 import moment from "moment";
 import { Content, Question } from '../model/SurveyContent';
+import { SurveyAllocation } from '../model/surveyAllocation.model';
+import { Survey } from '../model/survey.model';
 
 export type PhotoContent = {type: 'photo'; url: string};
 export type VideoContent = {type: 'video'; url: string};
@@ -176,25 +178,29 @@ export class JournalService {
             const answer = await journal.$get('answer', {include: [{association: 'surveyAllocation', include: ['survey']}]});
             const allocation = answer.surveyAllocation;
             const survey = allocation.survey;
-            let allocationName = `${group.name} (${group.code})`;
-            if (allocation.openAt) {
-                allocationName += ` - ${formatDate(allocation.openAt)}`;
-            }
-            if (allocation.closeAt) {
-                allocationName += ` - ${formatDate(allocation.closeAt)}`;
-            }
             const [questionId] = journal.clientJournalId.split('-', 1);
             const questions = survey.content.content as Content[];
             const questionIndex = questions.findIndex((q) => q.id === questionId);
             const question = questions[questionIndex] as Question;
-            const questionTitleStripped = `${question.title.substr(0, 32).replace(/[^a-zA-Z0-9 ]*/, '_').replace(/^_|_$/, '')}`;
-            const answerName = `${question.questionNumber ? `${question.questionNumber}` : `${questionIndex + 1}`} - ${questionTitleStripped}`;
-            name = `Surveys/${survey.name} (${survey.id})/${allocationName}/${answerName}/${client.participantID}/${entryFilename}`;
+            name = JournalService.getSurveyJournalEntryName(survey, allocation, group, client, question, questionIndex, entryFilename);
         }
 
         await this.storageService.rename(upload.key, name);
         entry.storageUrl = name;
 
         return entry.save();
+    }
+
+    static getSurveyJournalEntryName(survey: Survey, allocation: SurveyAllocation, group: Group, client: Client, question: Question, questionIndex: number, entryFilename: string) {
+        let allocationName = `${group.name} (${group.code})`;
+        if (allocation.openAt) {
+            allocationName += ` - ${formatDate(allocation.openAt)}`;
+        }
+        if (allocation.closeAt) {
+            allocationName += ` - ${formatDate(allocation.closeAt)}`;
+        }
+        const questionTitleStripped = `${question.title.substr(0, 32).replace(/[^a-zA-Z0-9 ]*/, '_').replace(/^_|_$/, '')}`;
+        const answerName = `${question.questionNumber ? `${question.questionNumber}` : `${questionIndex + 1}`} - ${questionTitleStripped}`;
+        return `Surveys/${survey.name} (${survey.id})/${allocationName}/${answerName}/${client.participantID}/${entryFilename}`;
     }
 }

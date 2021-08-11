@@ -27,6 +27,8 @@ import { GroupService } from '../service/group.service';
 import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocation.model';
 import { extractAnswer, formatDatetime, UnpackedQuestion, unpackQuestions } from '../util/survey';
 import { Journal } from '../model/journal.model';
+import { JournalEntry } from '../model/journalEntry.model';
+import { ClientJournalEntry, JournalService } from '../service/journal.service';
 
 function parseDateOrNull(date: string, endOfDay: boolean) {
     return date && date !== '' ? new Date(`${date}${endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'}`) : null;
@@ -317,15 +319,39 @@ export class SurveyController {
         res.attachment(name).send(csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(
             allocation.answers.map((answer) => {
                 const answerMap = answer.answer.answers;
+                const client = clientMap[answer.clientId];
                 const row = [
-                    clientMap[answer.clientId].participantID,
+                    client.participantID,
                     answer.answer.complete ? 'yes' : 'no',
                 ];
                 if (answer.answer.complete) {
                     row.push(formatDatetime(answer.updatedAt));
-                    questions.forEach((q) => {
+                    questions.forEach((q, questionIndex) => {
                         const answer = answerMap[q.id];
-                        row.push(...extractAnswer(q, answer));
+                        if (q.type === 'JournalQuestion') {
+                            const entries = answer as ClientJournalEntry[];
+                            const result = entries ? entries.map((entry) => {
+                                let entryRow = entry.date.toLocaleString() + ': ';
+                                switch (entry.content.type) {
+                                    case 'text':
+                                        entryRow += entry.content.text;
+                                        break;
+                                    case 'audio':
+                                        entryRow += JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, 'audio 1');
+                                        break;
+                                    case 'media':
+                                        entryRow += entry.content.caption || 'No caption';
+                                        entry.content.media.forEach((media, index) => {
+                                            entryRow += '\n\t' + JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, media.type + ' ' + (index + 1));
+                                        });
+                                        break;
+                                }
+                                return entryRow;
+                            }).join('\n') : '';
+                            row.push(result);
+                        } else {
+                            row.push(...extractAnswer(q, answer));
+                        }
                     });
                 }
                 return row;
