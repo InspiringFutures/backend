@@ -251,7 +251,7 @@ export class SurveyController {
         const clients = await group.$get('clients');
 
         // Get journal answers
-        const allJournals = await this.journalModel.findAll({where: {answerId: allocation.answers.map(a => a.id)}, include: ["entries"], order: [['createdAt', 'ASC']]});
+        const allJournals = await this.journalModel.findAll({where: {answerId: allocation.answers.map(a => a.id)}, include: ["entries"], order: [['createdAt', 'ASC'], [{model: JournalEntry, as: 'entries'}, 'sequence', 'ASC']]});
         const journals: {[answerId: string]: {[questionId: string]: Journal[]}} = {};
         allJournals.forEach((journal) => {
             const answerId = journal.answerId;
@@ -329,26 +329,7 @@ export class SurveyController {
                     questions.forEach((q, questionIndex) => {
                         const questionAnswer = answerMap[q.id];
                         if (q.type === 'JournalQuestion') {
-                            const entries = questionAnswer as ClientJournalEntry[];
-                            const result = entries ? entries.map((entry) => {
-                                let entryRow = formatDate(entry.date) + ': ';
-                                switch (entry.content.type) {
-                                    case 'text':
-                                        entryRow += entry.content.text;
-                                        break;
-                                    case 'audio':
-                                        entryRow += JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, entry.date, 'audio 1');
-                                        break;
-                                    case 'media':
-                                        entryRow += entry.content.caption || 'No caption';
-                                        entry.content.media.forEach((media, index) => {
-                                            entryRow += '\n\t' + JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, entry.date, media.type + ' ' + (index + 1));
-                                        });
-                                        break;
-                                }
-                                return entryRow;
-                            }).join('\n') : '';
-                            const otherResult = (journals?.[answer.id]?.[q.id]?.map((journal) => {
+                            const result = (journals?.[answer.id]?.[q.id]?.map((journal) => {
                                 let entryRow = formatDate(journal.createdAt) + ': ';
                                 switch (journal.type) {
                                     case 'text':
@@ -366,7 +347,7 @@ export class SurveyController {
                                 }
                                 return entryRow;
                             }) || []).join('\n');
-                            row.push(result + '\n\n---\n\n' + otherResult);
+                            row.push(result);
                         } else {
                             row.push(...extractAnswer(q, questionAnswer));
                         }
