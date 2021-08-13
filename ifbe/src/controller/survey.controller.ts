@@ -251,7 +251,7 @@ export class SurveyController {
         const clients = await group.$get('clients');
 
         // Get journal answers
-        const allJournals = await this.journalModel.findAll({where: {answerId: allocation.answers.map(a => a.id)}, include: ["entries"]});
+        const allJournals = await this.journalModel.findAll({where: {answerId: allocation.answers.map(a => a.id)}, include: ["entries"], order: [['createdAt', 'ASC']]});
         const journals: {[answerId: string]: {[questionId: string]: Journal[]}} = {};
         allJournals.forEach((journal) => {
             const answerId = journal.answerId;
@@ -327,9 +327,9 @@ export class SurveyController {
                 if (answer.answer.complete) {
                     row.push(formatDatetime(answer.updatedAt));
                     questions.forEach((q, questionIndex) => {
-                        const answer = answerMap[q.id];
+                        const questionAnswer = answerMap[q.id];
                         if (q.type === 'JournalQuestion') {
-                            const entries = answer as ClientJournalEntry[];
+                            const entries = questionAnswer as ClientJournalEntry[];
                             const result = entries ? entries.map((entry) => {
                                 let entryRow = formatDate(entry.date) + ': ';
                                 switch (entry.content.type) {
@@ -348,7 +348,7 @@ export class SurveyController {
                                 }
                                 return entryRow;
                             }).join('\n') : '';
-                            const otherResult = journals[answer.id][q.id].map((journal) => {
+                            const otherResult = (journals?.[answer.id]?.[q.id]?.map((journal) => {
                                 let entryRow = formatDate(journal.createdAt) + ': ';
                                 switch (journal.type) {
                                     case 'text':
@@ -365,10 +365,10 @@ export class SurveyController {
                                         break;
                                 }
                                 return entryRow;
-                            }).join('\n');
-                            row.push(result + '');
+                            }) || []).join('\n');
+                            row.push(result + '\n\n---\n\n' + otherResult);
                         } else {
-                            row.push(...extractAnswer(q, answer));
+                            row.push(...extractAnswer(q, questionAnswer));
                         }
                     });
                 }
