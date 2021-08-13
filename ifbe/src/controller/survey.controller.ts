@@ -28,7 +28,7 @@ import { SurveyAllocation, SurveyAllocationType } from '../model/surveyAllocatio
 import { extractAnswer, formatDatetime, UnpackedQuestion, unpackQuestions } from '../util/survey';
 import { Journal } from '../model/journal.model';
 import { JournalEntry } from '../model/journalEntry.model';
-import { ClientJournalEntry, JournalService } from '../service/journal.service';
+import { ClientJournalEntry, formatDate, JournalService } from '../service/journal.service';
 
 function parseDateOrNull(date: string, endOfDay: boolean) {
     return date && date !== '' ? new Date(`${date}${endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'}`) : null;
@@ -274,7 +274,7 @@ export class SurveyController {
     @Get('(:id/allocation/)?:allocationId/results.csv')
     @NeedsAdmin
     async viewResultsCSV(@Param('allocationId', ParseIntPipe) allocationId:  number, @Res() res) {
-        const {group, clients, allocation} = await this.viewResults(allocationId);
+        const {group, clients, allocation, journals} = await this.viewResults(allocationId);
 
         const questions: UnpackedQuestion[] = unpackQuestions(allocation);
 
@@ -331,24 +331,42 @@ export class SurveyController {
                         if (q.type === 'JournalQuestion') {
                             const entries = answer as ClientJournalEntry[];
                             const result = entries ? entries.map((entry) => {
-                                let entryRow = entry.date.toLocaleString() + ': ';
+                                let entryRow = formatDate(entry.date) + ': ';
                                 switch (entry.content.type) {
                                     case 'text':
                                         entryRow += entry.content.text;
                                         break;
                                     case 'audio':
-                                        entryRow += JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, 'audio 1');
+                                        entryRow += JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, entry.date, 'audio 1');
                                         break;
                                     case 'media':
                                         entryRow += entry.content.caption || 'No caption';
                                         entry.content.media.forEach((media, index) => {
-                                            entryRow += '\n\t' + JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, media.type + ' ' + (index + 1));
+                                            entryRow += '\n\t' + JournalService.getSurveyJournalEntryName(allocation.survey, allocation, group, client, q, questionIndex, entry.date, media.type + ' ' + (index + 1));
                                         });
                                         break;
                                 }
                                 return entryRow;
                             }).join('\n') : '';
-                            row.push(result);
+                            const otherResult = journals[answer.id][q.id].map((journal) => {
+                                let entryRow = formatDate(journal.createdAt) + ': ';
+                                switch (journal.type) {
+                                    case 'text':
+                                        entryRow += journal.text;
+                                        break;
+                                    case 'audio':
+                                        entryRow += journal.entries[0].storageUrl;
+                                        break;
+                                    case 'media':
+                                        entryRow += journal.text || 'No caption';
+                                        journal.entries.forEach((entry) => {
+                                            entryRow += '\n\t' + entry.storageUrl;
+                                        });
+                                        break;
+                                }
+                                return entryRow;
+                            }).join('\n');
+                            row.push(result + '');
                         } else {
                             row.push(...extractAnswer(q, answer));
                         }
