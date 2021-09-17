@@ -212,6 +212,16 @@ export class ClientController {
         return results;
     }
 
+    @Get(':clientId/contactDetails')
+    async getContactDetails(@Param('clientId') clientId: number, @Headers('X-Token') token: string) {
+        const client = await this.authenticateClient(clientId, token);
+        const group = await client.$get('group');
+
+        return {
+            contactDetails: group.contactDetails,
+        };
+    }
+
     @Post(':clientId/answer/:answerId')
     async answerSurvey(@Param('clientId') clientId: number, @Param('answerId') answerId: number, @Headers('X-Token') token: string, @Body() answers: any, @Res() res) {
         const client = await this.authenticateClient(clientId, token);
@@ -284,6 +294,7 @@ export class ClientController {
                 id: '' + answer.id,
                 content: initialSurveyAllocation.survey.content.content,
             } : undefined,
+            contactDetails: group.contactDetails,
         };
     }
 }

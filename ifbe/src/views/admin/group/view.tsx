@@ -86,6 +86,11 @@ const GroupView = wrap(({group, allocations}: Props) => {
     <p>Code: {group.code}</p>
     <p>Group registration QR code<br /><img src={urlBuilder.build('/qr', {url: groupCodeURL})} /><br /><a href={groupCodeURL}>{groupCodeURL}</a></p>
     {owner && <p>You are an owner of this group.</p>}
+    <p>Contact details: {owner ? <form method="post">
+        <textarea name="contactDetails" rows={6} cols={60}>{group.contactDetails}</textarea>
+        <br />
+        <input type="submit" value="Save" />
+    </form> : <pre>{group.contactDetails}</pre>}</p>
     <h2>Participants</h2>
     <table>
         <tr>

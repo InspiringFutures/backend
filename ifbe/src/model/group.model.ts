@@ -20,6 +20,9 @@ export class Group extends Model<Group> {
     @Column
     apiURL?: string;
 
+    @Column
+    contactDetails?: string;
+
     @HasMany(() => Client)
     clients: Client[];
 

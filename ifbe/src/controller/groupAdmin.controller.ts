@@ -50,6 +50,15 @@ export class GroupAdminController {
         };
     }
 
+    @Post(':id')
+    @NeedsAdmin
+    async setGroupDescription(@Param('id') groupId, @Body('contactDetails') contactDetails) {
+        const group = await this.hasGroupAccess(groupId, AccessLevel.owner);
+        group.contactDetails = contactDetails;
+        await group.save();
+        throw redirect('/admin/group/' + group.id);
+    }
+
     @Get(':id/client/:clientId')
     @Render('admin/client')
     @NeedsAdmin

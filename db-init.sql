@@ -156,3 +156,5 @@ ALTER TABLE "SurveyAllocations" ADD COLUMN "dueAt" timestamp null;
 
 ALTER TABLE "Surveys" ADD COLUMN "deletedAt" timestamp null;
 ALTER TABLE "SurveyAllocations" ADD COLUMN "deletedAt" timestamp null;
+
+ALTER TABLE "Groups" ADD COLUMN "contactDetails" character varying null;
