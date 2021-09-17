@@ -1,3 +1,4 @@
+import Cookies from 'js-cookie';
 import { SurveyContent } from "./SurveyContent";
 
 export function extractErrorMessage(e: Error | any) {
@@ -46,7 +47,8 @@ export const saveSurvey = async (surveyId: number | string | undefined, content:
         const result = await fetch(`${endpoint}/survey/${surveyId}/content`, {
             headers: {
                 'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'CSRF-Token': Cookies.get('CSRF-TOKEN') ?? '',
             },
             method: 'POST',
             body: JSON.stringify({content, autoSave}),

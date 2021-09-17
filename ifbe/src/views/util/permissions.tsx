@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AccessLevel, AccessLevels } from "../../model/accessLevels";
-import { useUrlBuilder } from "../wrapper";
+import { useCsrfHiddenField, useUrlBuilder } from '../wrapper';
 
 function nameForPermission(level: AccessLevel) {
     switch (level) {
@@ -37,18 +37,21 @@ type AdminRowProps<P extends string> = {
 
 const AdminRow = function<P extends string>({admin, editable, permissionName, permissionExplanation}: AdminRowProps<P>) {
     const urlBuilder = useUrlBuilder();
+    const csrfField = useCsrfHiddenField();
     return <li>
         {admin.name || `${admin.email} (not logged in yet)`}{' – '}
         {editable ?
             <>
                 <form style={{display: "inline"}} method="POST"
                       action={urlBuilder.build('admins')}>
+                    {csrfField}
                     <input type="hidden" name="email" value={admin.email} />
                     <PermissionSelector level={admin[permissionName].level} permissionExplanation={permissionExplanation}/>
                     <input type="submit" value="Update"/>
                 </form>
                 <form style={{display: "inline"}} method="POST"
                       action={urlBuilder.build('admins')}>
+                    {csrfField}
                     <input type="hidden" name="email" value={admin.email} />
                     <input type="submit" value="Delete"/>
                 </form>
@@ -64,12 +67,14 @@ type AdminManagementProps<P extends string> = {
 
 export function AdminManagement<P extends string>({on, permissionName, permissionExplanation}: AdminManagementProps<P>) {
     const urlBuilder = useUrlBuilder();
+    const csrfField = useCsrfHiddenField();
 
     const owner = on.permission === AccessLevel.owner;
     return <>
         <ul>{on.admins.map(admin => <AdminRow key={admin.id} admin={admin} editable={owner}
                                               permissionName={permissionName} permissionExplanation={permissionExplanation} />)}</ul>
         {owner && <form method="POST" action={urlBuilder.build('admins')}>
+            {csrfField}
             <label>Email: <input name="email" placeholder="Email address"/></label><br/>
             <PermissionSelector level={AccessLevel.owner} permissionExplanation={permissionExplanation} />
             <input type="submit" value="Add"/>

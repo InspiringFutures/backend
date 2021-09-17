@@ -2,18 +2,21 @@ import * as React from 'react';
 
 export interface Props {
     _locals: {
-        url: string
+        url: string;
+        csrfToken: string;
     }
 }
 
 interface WrapperContext {
     url: string;
     urlBuilder?: UrlBuilder;
+    csrfToken: string;
 }
 
 const WrapperContext = React.createContext<WrapperContext>({
     url: 'unknown',
     urlBuilder: undefined,
+    csrfToken: 'unknown',
 });
 
 export function wrap<T>(WrappedComponent: React.ComponentType<T>) {
@@ -63,4 +66,9 @@ export class UrlBuilder {
 export function useUrlBuilder() {
     const c = React.useContext(WrapperContext);
     return c.urlBuilder || (c.urlBuilder = new UrlBuilder(c.url));
+}
+
+export function useCsrfHiddenField() {
+    const c = React.useContext(WrapperContext);
+    return <input type="hidden" name="_csrf" value={c.csrfToken} />;
 }

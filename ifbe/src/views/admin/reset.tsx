@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { useUrlBuilder, wrap } from "../wrapper";
+import { useCsrfHiddenField, useUrlBuilder, wrap } from '../wrapper';
 import { Group } from "../../model/group.model";
 
 type Props =
@@ -9,6 +9,7 @@ type Props =
 
 const ResetView = wrap((props: Props) => {
     const urlBuilder = useUrlBuilder();
+    const csrfField = useCsrfHiddenField();
 
     const {participantID} = props;
 
@@ -19,6 +20,7 @@ const ResetView = wrap((props: Props) => {
         <p>Please confirm that {participantID} has lost access to their device.</p>
         <span dangerouslySetInnerHTML={{ __html: backButton }} />
         <form method="POST" style={{ display: "inline" }}>
+            {csrfField}
             <input type="hidden" name="confirmed" value="true" />
             <input type="submit" value="Confirm" />
         </form>

@@ -12,6 +12,8 @@ import createMemoryStore from 'memorystore';
 import { AppModule } from './app.module';
 import { RedirectFilter } from "./util/redirect";
 import { RolesGuard } from "./util/guard";
+import csurf from 'csurf';
+import bodyParser from 'body-parser';
 
 const MemoryStore = createMemoryStore(session);
 
@@ -25,15 +27,19 @@ async function bootstrap() {
     saveUninitialized: false,
     resave: false,
   }));
+  app.use(bodyParser.urlencoded({extended: true }));
+  app.use(bodyParser.json());
+  app.use(csurf());
+  app.use ((req, res, next) => {
+    res.locals.url = process.env.BASE_URL + req.originalUrl;
+    res.locals.csrfToken = req.csrfToken();
+    next();
+  });
   app.setBaseViewsDir(join(__dirname, 'views'));
   app.set('view engine', 'js');
   app.engine('js', createEngine());
   app.useGlobalFilters(new RedirectFilter());
   app.useGlobalGuards(new RolesGuard(app.get(Reflector)));
-  app.use ((req, res, next) => {
-    res.locals.url = process.env.BASE_URL + req.originalUrl;
-    next();
-  });
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

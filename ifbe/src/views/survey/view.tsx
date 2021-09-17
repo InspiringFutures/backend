@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Survey } from "../../model/survey.model";
-import { useUrlBuilder, wrap } from "../wrapper";
+import { useCsrfHiddenField, useUrlBuilder, wrap } from '../wrapper';
 import { AccessLevel } from "../../model/accessLevels";
 import { AdminManagement, PermissionExplanation } from '../util/permissions';
 import { SurveyAllocation } from '../../model/surveyAllocation.model';
@@ -26,6 +26,7 @@ function formatDate(date: Date|null) {
 let lastAllocation = null;
 const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
     const urlBuilder = useUrlBuilder();
+    const csrfField = useCsrfHiddenField();
 
     const url = urlBuilder.build('allocation/' + allocation.id);
     const isGroupRepeat = lastAllocation !== null && lastAllocation.groupId === allocation.groupId;
@@ -33,6 +34,7 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
     lastAllocation = allocation;
     const row = <tr>
         <form method="POST" action={url}>
+            {csrfField}
             <td>
                 {isGroupRepeat ? "" : <a href={urlBuilder.absolute(`/admin/group/${allocation.groupId}`)}>{allocation.group.name}</a>}
             </td>
@@ -45,6 +47,7 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
         </form>
         <td>
             <form method="POST" action={url + "/delete"}>
+                {csrfField}
                 <input type="submit" value="Delete" />
             </form>
         </td>
@@ -56,11 +59,13 @@ const TimedAllocationRow = ({allocation}: {allocation: Allocation}) => {
 };
 
 const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
+    const csrfField = useCsrfHiddenField();
     const urlBuilder = useUrlBuilder();
     const url = urlBuilder.build('allocation/' + allocation.id);
 
     return <tr>
         <form method="POST" action={url}>
+            {csrfField}
             <td><a href={urlBuilder.absolute(`/admin/group/${allocation.groupId}`)}>{allocation.group.name}</a></td>
             <td><textarea name="note" defaultValue={allocation.note} /></td>
             <td>{allocation.creator.name}</td>
@@ -68,6 +73,7 @@ const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
         </form>
         <td>
             <form method="POST" action={url + "/delete"}>
+                {csrfField}
                 <input type="submit" value="Delete" />
             </form>
         </td>
@@ -78,6 +84,7 @@ const InitialAllocationRow = ({allocation}: {allocation: Allocation}) => {
 };
 
 const SurveyView = wrap(({groups, survey}: Props) => {
+    const csrfField = useCsrfHiddenField();
     const urlBuilder = useUrlBuilder();
     const owner = survey.permission === AccessLevel.owner;
     const editable = survey.permission !== AccessLevel.view && survey.allocations.length === 0;
@@ -88,12 +95,14 @@ const SurveyView = wrap(({groups, survey}: Props) => {
 
     return (<body>
     <form method="POST" action={urlBuilder.build()}>
+        {csrfField}
         <h1>Survey: <input style={{font: 'inherit', border: '1px solid #ccc'}} name="name" value={survey.name} /> &nbsp; <input type="submit" value="Save" /></h1>
     </form>
     <p><a href="/admin">Back to admin area</a></p>
     {owner && <p>You are an owner of this survey.<br />
         <form style={{marginLeft: '1em'}} method="POST" action={urlBuilder.build('delete')}>
-          <p>Deallocate and delete this survey <input type="submit" value="Delete survey" /></p>
+            {csrfField}
+            <p>Deallocate and delete this survey <input type="submit" value="Delete survey" /></p>
         </form>
     </p>}
     <p>Last modified by {survey.updater.name} at {survey.updatedAt.toLocaleString()}.</p>
@@ -111,6 +120,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
         <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={6}>&nbsp;</th></tr>
         <tr>
             <form method="POST" action={url}>
+                {csrfField}
                 <input type="hidden" name="type" value="oneoff" />
                 <td><select name="groupId" required={true}>
                     {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
@@ -136,6 +146,7 @@ const SurveyView = wrap(({groups, survey}: Props) => {
         <tr><th colSpan={2} align="left">Allocate to another group</th><th colSpan={4}>&nbsp;</th></tr>
         <tr>
             <form method="POST" action={url}>
+                {csrfField}
                 <input type="hidden" name="type" value="initial" />
                 <td><select name="groupId" required={true}>
                     {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}

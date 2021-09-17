@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Group } from "../../../model/group.model";
-import { useUrlBuilder, wrap } from "../../wrapper";
+import { useCsrfHiddenField, useUrlBuilder, wrap } from '../../wrapper';
 import { Client, ClientStatus as CS } from '../../../model/client.model';
 import { AccessLevel } from "../../../model/accessLevels";
 import { AdminManagement, PermissionExplanation } from '../../util/permissions';
@@ -13,10 +13,12 @@ interface Props {
 
 const ClientRow = ({client, editable, clientURL}: {client: Client; editable: boolean, clientURL: string}) => {
     const urlBuilder = useUrlBuilder();
+    const csrfField = useCsrfHiddenField();
 
     const clientStatusForm = (newStatus, label) => {
         return <form style={{display: "inline"}} method="POST"
               action={urlBuilder.build('client/' + client.id + '/status')}>
+            {csrfField}
             <input type="hidden" name="newStatus" value={newStatus} />
             <input type="submit" value={label} />
         </form>;
@@ -27,6 +29,7 @@ const ClientRow = ({client, editable, clientURL}: {client: Client; editable: boo
           style={{display: "inline"}}
           method="POST"
           action={urlBuilder.build('client/' + client.id + '/reset')}>
+            {csrfField}
             <input type="submit" value="Reset Access" />
         </form>;
     };
@@ -54,6 +57,7 @@ function formatDatetime(date: Date) {
 
 const GroupView = wrap(({group, allocations}: Props) => {
     const urlBuilder = useUrlBuilder();
+    const csrfField = useCsrfHiddenField();
     const owner = group.permission === AccessLevel.owner;
     const editable = group.permission !== AccessLevel.view;
 
@@ -87,6 +91,7 @@ const GroupView = wrap(({group, allocations}: Props) => {
     <p>Group registration QR code<br /><img src={urlBuilder.build('/qr', {url: groupCodeURL})} /><br /><a href={groupCodeURL}>{groupCodeURL}</a></p>
     {owner && <p>You are an owner of this group.</p>}
     <p>Contact details: {owner ? <form method="post">
+        {csrfField}
         <textarea name="contactDetails" rows={6} cols={60}>{group.contactDetails}</textarea>
         <br />
         <input type="submit" value="Save" />
@@ -105,6 +110,7 @@ const GroupView = wrap(({group, allocations}: Props) => {
         Generate sheet of initial registration QR codes
     </a></p>}
     {editable && <form method="POST" action={urlBuilder.build('clients')}>
+        {csrfField}
         <h3>Add new participants</h3>
         <textarea name='participants' placeholder='Enter participant IDs, one per line' rows={6}
                   cols={40} />
