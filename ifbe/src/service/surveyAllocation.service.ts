@@ -38,7 +38,8 @@ export class SurveyAllocationService {
         //   not ended or have no end date; and
         //   have
         //     no pushedAt date; or
-        //     a pushedAt date before the dueAt date, a dueAt date, and a pushedAt date over 24 hours ago (for rate-limiting)
+        //     a pushedAt date before the dueAt date, a dueAt date, and a pushedAt date over 24 hours ago (for rate-limiting); and
+        //   are a oneoff survey.
         const nowMinus24hours = new Date();
         nowMinus24hours.setDate(nowMinus24hours.getDate() - 1);
         const allocationsToPush = await this.surveyAllocationModel.findAll({
@@ -51,6 +52,7 @@ export class SurveyAllocationService {
                         {dueAt: {[Op.lt]: fn('NOW')}},
                         {pushedAt: {[Op.lt]: nowMinus24hours}},
                     ]}]},
+                    {type: 'oneoff'},
                 ],
             },
             limit: 100,
