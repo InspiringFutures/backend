@@ -1,4 +1,4 @@
-import { Body, Injectable, Post, Render } from '@nestjs/common';
+import { Body, Get, Injectable, Post, Render } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 
 import { Controller, Page } from '../util/autopage';

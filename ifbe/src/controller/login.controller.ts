@@ -30,12 +30,19 @@ export class LoginController {
 
         return {
             "url": this.googleService.client.authorizationUrl({
-                                                                   scope: 'openid email profile',
-                                                                   response_mode: 'form_post',
-                                                                   nonce,
-                                                               }),
+                scope: 'openid email profile',
+                response_mode: 'form_post',
+                nonce,
+                prompt: 'select_account',
+            }),
             "statusCode": 302,
         };
+    }
+
+    @Post('out')
+    async logout() {
+        await this.userService.logout();
+        throw redirect('/');
     }
 
     @Post('cb')

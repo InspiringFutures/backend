@@ -39,4 +39,17 @@ export class UserService {
         }
         return null;
     }
+
+    async logout() {
+        this.cachedCurrentUser = null;
+        await new Promise((resolve, reject) => {
+            this.request.session.destroy((err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
 }

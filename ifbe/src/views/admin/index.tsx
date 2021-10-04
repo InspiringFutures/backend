@@ -15,7 +15,7 @@ export default wrap(({ groups, user, surveys }: Props) => {
     const csrfField = useCsrfHiddenField();
     return (<body>
     <h1>Welcome to Inspiring Futures</h1>
-    <p>You are logged in as {user.name}.</p>
+    <p>You are logged in as {user.name}. <form method="POST" action="/login/out"><input type="submit" value="Logout" /></form></p>
     <h2>Groups</h2>
     <ul>{groups.map(group => <li key={group.id}><a
         href={'/admin/group/' + group.id}>{group.name}</a>
