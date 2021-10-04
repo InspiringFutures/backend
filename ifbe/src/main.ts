@@ -29,11 +29,18 @@ async function bootstrap() {
   }));
   app.use(bodyParser.urlencoded({extended: true }));
   app.use(bodyParser.json());
-  app.use(csurf());
+  const csurfHandler = csurf();
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/api')) {
+      return next();
+    } else {
+      return csurfHandler(req, res, next);
+    }
+  });
   app.use ((req, res, next) => {
     res.locals.url = process.env.BASE_URL + req.originalUrl;
-    res.locals.csrfToken = req.csrfToken();
-    next();
+    res.locals.csrfToken = req.csrfToken && req.csrfToken();
+    return next();
   });
   app.setBaseViewsDir(join(__dirname, 'views'));
   app.set('view engine', 'js');
