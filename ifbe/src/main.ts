@@ -31,7 +31,7 @@ async function bootstrap() {
   app.use(bodyParser.json());
   const csurfHandler = csurf();
   app.use((req, res, next) => {
-    if (req.url.startsWith('/api')) {
+    if (req.url.startsWith('/api/') || req.url.startsWith('/login/')) {
       return next();
     } else {
       return csurfHandler(req, res, next);

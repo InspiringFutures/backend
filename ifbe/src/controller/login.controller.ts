@@ -46,7 +46,7 @@ export class LoginController {
 
         console.log('param', params);
 
-        const tokenSet = await this.googleService.client.callback('http://localhost:8115/login/cb', params, { nonce });
+        const tokenSet = await this.googleService.client.callback(req.url, params, { nonce });
         console.log('validated ID Token claims %j', tokenSet.claims());
 
         const claims = tokenSet.claims();

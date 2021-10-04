@@ -26,13 +26,13 @@ export class UserService {
     }
 
     currentUser(): User|null {
-        if (process.env.DB_USER === 'dev') {
+        /*if (process.env.DB_USER === 'dev') {
             return {
                 id: 1,
                 name: 'Robin Dev',
                 level: AdminLevel.super,
             };
-        }
+        }*/
         if (this.cachedCurrentUser) return this.cachedCurrentUser;
         if (this.request.session[USER_SESSION_KEY]) {
             return this.cachedCurrentUser = this.request.session[USER_SESSION_KEY];
