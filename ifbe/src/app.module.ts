@@ -11,7 +11,6 @@ import { RootController } from './root.controller';
 import { GoogleServiceProvider } from './service/google.service';
 import { LoginController } from './controller/login.controller';
 import { Admin } from './model/admin.model';
-import { SampleController } from './sample.controller';
 import { UserService } from './service/user.service';
 import { AdminController } from './controller/admin.controller';
 import { GroupService } from './service/group.service';
@@ -73,7 +72,7 @@ class StorageModule {}
           }),
       }),
   ],
-  controllers: [GroupController, ClientController, RootController, LoginController, SampleController, AdminController, QRController, SurveyController, GroupAdminController],
+  controllers: [GroupController, ClientController, RootController, LoginController, AdminController, QRController, SurveyController, GroupAdminController],
   providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider, ClientService, SurveyService, PushNotificationService, SurveyAllocationService],
 })
 export class AppModule {

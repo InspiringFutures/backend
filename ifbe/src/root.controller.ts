@@ -29,6 +29,8 @@ export class RootController {
     @Get('status')
     async root() {
         const groupCount = await this.groupModel.count();
-        return "<pre>" + "Group count: " + groupCount + "\r\n" + "S3 status: " + JSON.stringify(this.storageService.status(), null, 4) + "</pre>";
+        const status = await (await this.storageService.status()).promise();
+        console.log(`Status: ${groupCount} groups\r\nS3:`, status);
+        return "OK";
     }
 }

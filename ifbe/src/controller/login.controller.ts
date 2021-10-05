@@ -35,7 +35,7 @@ export class LoginController {
                 nonce,
                 prompt: 'select_account',
             }),
-            "statusCode": 302,
+            "statusCode": 303,
         };
     }
 
