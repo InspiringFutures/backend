@@ -1,21 +1,29 @@
+export type TextWithOptionalAudio = string | {
+    text: string;
+    audio?: string;
+};
+
 export interface Content {
     readonly type: SurveyContent['type'];
     id: string;
     originId?: string;
-    title?: string;
-    description?: string;
 }
 
 export interface SectionHeader extends Content {
     readonly type: 'SectionHeader';
+    title?: string;
+    description?: TextWithOptionalAudio;
 }
 
 export interface TextBlock extends Content {
     readonly type: 'TextBlock';
+    title?: TextWithOptionalAudio;
 }
 
 export interface Question extends Content {
     readonly type: SurveyQuestion['type'];
+    title?: TextWithOptionalAudio;
+    description?: TextWithOptionalAudio;
     questionNumber?: number;
 }
 
@@ -39,28 +47,28 @@ export interface ParagraphQuestion extends Question {
 
 export interface ChoiceQuestion extends Question {
     readonly type: 'ChoiceQuestion';
-    choices?: string[];
+    choices?: TextWithOptionalAudio[];
     allowOther?: boolean;
 }
 
 export interface CheckboxQuestion extends Question {
     readonly type: 'CheckboxQuestion';
-    choices?: string[];
+    choices?: TextWithOptionalAudio[];
     allowOther?: boolean;
 }
 
 export interface CheckboxGridQuestion extends Question {
     readonly type: 'CheckboxGridQuestion';
-    rows?: string[];
+    rows?: TextWithOptionalAudio[];
     columns?: string[];
-    commentsPrompt?: string;
+    commentsPrompt?: TextWithOptionalAudio;
 }
 
 export interface ChoiceGridQuestion extends Question {
     readonly type: 'ChoiceGridQuestion';
-    rows?: string[];
+    rows?: TextWithOptionalAudio[];
     columns?: string[];
-    commentsPrompt?: string;
+    commentsPrompt?: TextWithOptionalAudio;
 }
 
 export interface JournalQuestion extends Question {

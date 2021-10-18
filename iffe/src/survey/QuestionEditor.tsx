@@ -1,11 +1,12 @@
 import React, { FunctionComponent, PropsWithChildren } from "react";
 import { Content, SurveyContent, SurveyQuestion } from "./SurveyContent";
-import { EditableText } from "./EditableText";
+import { EditableText, extractText } from "./EditableText";
 import Typography from "@material-ui/core/Typography";
 import { Spacer } from "./Spacer";
 import { QuestionTypeMenu } from "./QuestionTypeMenu";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
 import { sharedStyles } from "./styles";
+import { extractColumns } from "./Editors";
 
 export interface ModifyOptions {
     sectionOnly?: boolean;
@@ -52,6 +53,7 @@ export const QuestionEditor = function ({
                     let choices = undefined;
                     let allowOther = undefined;
                     let rows = undefined;
+                    let columns = undefined;
                     let placeholder = undefined;
                     let commentsPrompt = undefined;
                     switch (content.type) {
@@ -62,12 +64,12 @@ export const QuestionEditor = function ({
                             break;
                         case "ChoiceGridQuestion":
                         case "CheckboxGridQuestion":
-                            choices = content.columns;
+                            columns = content.columns;
                             rows = content.rows;
                             commentsPrompt = content.commentsPrompt;
                             break;
                         case "YesNoQuestion":
-                            choices = ["No", "Yes"];
+                            columns = ["No", "Yes"];
                             break;
                         case "TextQuestion":
                         case "ParagraphQuestion":
@@ -82,12 +84,12 @@ export const QuestionEditor = function ({
                     switch (newContent.type) {
                         case "CheckboxQuestion":
                         case "ChoiceQuestion":
-                            newContent.choices = choices;
+                            newContent.choices = choices ?? columns?.map((text) => ({text}));
                             newContent.allowOther = allowOther;
                             break;
                         case "ChoiceGridQuestion":
                         case "CheckboxGridQuestion":
-                            newContent.columns = choices;
+                            newContent.columns = columns ?? (choices ? extractColumns(choices) : undefined);
                             newContent.rows = rows;
                             newContent.commentsPrompt = commentsPrompt;
                             break;

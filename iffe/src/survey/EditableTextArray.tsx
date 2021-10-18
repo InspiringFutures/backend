@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { DragDropContext, Draggable, Droppable, DropResult } from "react-beautiful-dnd";
-import { EditableText, SaveOptions } from "./EditableText";
+import { EditableText, extractText, SaveOptions } from "./EditableText";
 import Typography from "@material-ui/core/Typography";
 import DragIndicatorIcon from "@material-ui/icons/DragIndicator";
 import { Spacer } from "./Spacer";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
 import { sharedStyles } from "./styles";
+import { TextWithOptionalAudio } from "./SurveyContent";
 
 interface EditableTextArrayProps {
-    onSave: (newEntries: string[]) => void;
-    entries: string[];
+    onSave: (newEntries: TextWithOptionalAudio[]) => void;
+    entries: TextWithOptionalAudio[];
     placeholder: string;
     heading: string;
+    noAudio?: boolean | undefined;
 }
 
-export function EditableTextArray({onSave, entries, placeholder, heading}: EditableTextArrayProps) {
+export function EditableTextArray({noAudio, onSave, entries, placeholder, heading}: EditableTextArrayProps) {
     const [selectedIndex, setSelectedIndex] = useState<number>();
     const classes = useStyles();
 
@@ -30,7 +32,7 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
         setSelectedIndex(undefined);
     }
 
-    function save(index: number, text: string | undefined, options?: SaveOptions) {
+    function save(index: number, text: TextWithOptionalAudio | undefined, options?: SaveOptions) {
         console.log("save", index, text, options);
         if (entries[index] !== text) {
             const newEntries = [...entries];
@@ -62,7 +64,7 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
     const isValid = (index: number) => (value: string | undefined) => {
         if (value === undefined || value === "") return;
         const foundIndex = entries.findIndex((test, testIndex) => {
-            return testIndex !== index && value === test;
+            return testIndex !== index && value === extractText(test);
         });
         if (foundIndex !== -1) {
             return "Duplicate option";
@@ -84,6 +86,7 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
                                     <EditableText autoFocus={selectedIndex === index}
                                                   isValid={isValid(index)} text={entry}
                                                   noSupressSaves
+                                                  noAudio={noAudio}
                                                   onSave={(text, options) => save(index, text, options)}
                                                   onDelete={(options) => save(index, undefined, options)}/>
                                 </div>
@@ -98,6 +101,7 @@ export function EditableTextArray({onSave, entries, placeholder, heading}: Edita
             <EditableText key={entries.length} autoFocus={selectedIndex === entries.length}
                           isValid={isValid(-1)} holderClassName={classes.editableTextArrayAddText}
                           noSupressSaves
+                          noAudio
                           placeHolder={placeholder} onSave={(text, options) => {
                 let newIndex;
                 if (text) {

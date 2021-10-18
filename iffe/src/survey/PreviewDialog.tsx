@@ -44,7 +44,7 @@ function makeSectionMap(contents: Content[]) {
             type: "SectionHeader",
             id: "missingSectionHeader",
             title: "Missing Header",
-            description: "These questions are not in a section; add a Section at the beginning of the survey."
+            description: {text: "These questions are not in a section; add a Section at the beginning of the survey."},
         }, content: []
     };
     let currentSection = initialSection;

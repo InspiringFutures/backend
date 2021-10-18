@@ -30,9 +30,10 @@ import {
     SectionHeader,
     TextBlock,
     TextQuestion,
+    TextWithOptionalAudio,
     YesNoQuestion
 } from "./SurveyContent";
-import { escapedNewLineToLineBreakTag } from "./EditableText";
+import { escapedNewLineToLineBreakTag, extractText } from "./EditableText";
 
 import RadioButtonUncheckedIcon from "@material-ui/icons/RadioButtonUnchecked";
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
@@ -43,11 +44,11 @@ type ViewerProps<C extends Content> = {
 };
 type Viewer<C extends Content> = FunctionComponent<ViewerProps<C>>;
 
-const Description: Viewer<Content> = ({content}) => {
+const Description: Viewer<Content & {description?: TextWithOptionalAudio}> = ({content}) => {
     const classes = useStyles();
     return content.description ?
         <Typography
-            className={classes.description}>{escapedNewLineToLineBreakTag(content.description)}</Typography>
+            className={classes.description}>{escapedNewLineToLineBreakTag(extractText(content.description))}</Typography>
         : null;
 };
 
@@ -60,20 +61,20 @@ const SectionHeaderViewer: Viewer<SectionHeader> = ({content}) => {
 };
 
 const TextBlockViewer: Viewer<TextBlock> = ({content}) => {
-    return content.title ? <Typography>{escapedNewLineToLineBreakTag(content.title)}</Typography> :
+    return content.title ? <Typography>{escapedNewLineToLineBreakTag(extractText(content.title))}</Typography> :
         <em>Empty text block</em>;
 };
 
 const TextQuestionViewer: Viewer<TextQuestion> = ({content}) => {
     return <>
-        <TextField label={content.title} placeholder={content.placeholder} fullWidth/>
+        <TextField label={extractText(content.title)} placeholder={content.placeholder} fullWidth/>
         <Description content={content}/>
     </>;
 };
 
 const YesNoQuestionViewer: Viewer<YesNoQuestion> = ({content}) => {
     return <>
-        <FormLabel>{content.title}</FormLabel>
+        <FormLabel>{extractText(content.title)}</FormLabel>
         <RadioGroup>
             <FormControlLabel value="yes" control={<Radio/>} label="Yes"/>
             <FormControlLabel value="no" control={<Radio/>} label="No"/>
@@ -85,14 +86,14 @@ const YesNoQuestionViewer: Viewer<YesNoQuestion> = ({content}) => {
 const ConsentQuestionViewer: Viewer<ConsentQuestion> = ({content}) => {
     return <>
         <Typography variant="body1">Please tick to show you agree to the following:</Typography>
-        <FormControlLabel label={content.title} control={<Checkbox/>}/>
+        <FormControlLabel label={extractText(content.title)} control={<Checkbox/>}/>
         <Description content={content}/>
     </>;
 };
 
 const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
     return <>
-        <TextField label={content.title} placeholder={content.placeholder} fullWidth multiline
+        <TextField label={extractText(content.title)} placeholder={content.placeholder} fullWidth multiline
                    rows={4} rowsMax={10}/>
         <Description content={content}/>
     </>;
@@ -104,13 +105,13 @@ const ChoiceQuestionViewer: Viewer<ChoiceQuestion> = ({content}) => {
 
     let selectOther = () => setValue("other");
     return <FormControl>
-        <FormLabel>{content.title}</FormLabel>
+        <FormLabel>{extractText(content.title)}</FormLabel>
         <Description content={content}/>
         {choices.length > 0 ?
             <RadioGroup value={value} onChange={(e) => setValue(e.currentTarget.value)}>
                 {choices.map((choice, index) => <FormControlLabel key={index} value={"c" + index}
                                                                   control={<Radio/>}
-                                                                  label={choice}/>)}
+                                                                  label={extractText(choice)}/>)}
                 {content.allowOther && <FormControlLabel value="other" control={<Radio/>}
                                                          label={<span>Other: <TextField
                                                              onClick={selectOther}
@@ -128,13 +129,13 @@ const CheckboxQuestionViewer: Viewer<CheckboxQuestion> = ({content}) => {
     const otherRef = useRef<HTMLInputElement>(null);
 
     return <FormControl>
-        <FormLabel>{content.title}</FormLabel>
+        <FormLabel>{extractText(content.title)}</FormLabel>
         <Description content={content}/>
         {choices.length > 0 ?
             <>
                 {choices.map((choice, index) => <FormControlLabel key={index} value={"c" + index}
                                                                   control={<Checkbox/>}
-                                                                  label={choice}/>)}
+                                                                  label={extractText(choice)}/>)}
                 {content.allowOther &&
                 <FormControlLabel value="other" checked={otherChecked} onChange={(e, checked) => {
                     setOtherChecked(checked);
@@ -184,7 +185,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content, active})
     }
 
     return <>
-        <FormLabel>{content.title}</FormLabel>
+        <FormLabel>{extractText(content.title)}</FormLabel>
         <Description content={content}/>
         {rows.length > 0 && columns.length > 0 ?
             <table>
@@ -196,7 +197,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content, active})
                 </thead>
                 <tbody>
                 {rows.map((row, index) => <tr key={index}>
-                    <th>{row}</th>
+                    <th>{extractText(row)}</th>
                     {columns.map((column, colIndex) => <td key={colIndex}>
                         {active ? <Radio checked={isChecked(index, colIndex)} name={`${index}:${colIndex}`} onChange={changeHandler} /> : <RadioButtonUncheckedIcon />}
                     </td>)}
@@ -205,7 +206,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content, active})
             </table>
             : <div><em>No rows/columns defined</em></div>}
         {content.commentsPrompt &&
-        <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10}/>
+        <TextField label={extractText(content.commentsPrompt)} fullWidth multiline rows={4} rowsMax={10}/>
         }
     </>;
 };
@@ -215,7 +216,7 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content, acti
     const columns = content.columns || [];
 
     return <>
-        <FormLabel>{content.title}</FormLabel>
+        <FormLabel>{extractText(content.title)}</FormLabel>
         <Description content={content}/>
         {rows.length > 0 && columns.length > 0 ?
             <table>
@@ -227,7 +228,7 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content, acti
                 </thead>
                 <tbody>
                 {rows.map((row, index) => <tr key={index}>
-                    <th>{row}</th>
+                    <th>{extractText(row)}</th>
                     {columns.map((column, colIndex) => <td key={colIndex}>
                         {active ? <Checkbox /> : <CheckBoxOutlineBlankIcon />}
                     </td>)}
@@ -236,14 +237,14 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content, acti
             </table>
             : <div><em>No rows/columns defined</em></div>}
         {content.commentsPrompt &&
-            <TextField label={content.commentsPrompt} fullWidth multiline rows={4} rowsMax={10}/>
+            <TextField label={extractText(content.commentsPrompt)} fullWidth multiline rows={4} rowsMax={10}/>
         }
     </>;
 };
 
 const JournalQuestionViewer: Viewer<JournalQuestion> = ({content}) => {
     return <>
-        <FormLabel>{content.title}</FormLabel>
+        <FormLabel>{extractText(content.title)}</FormLabel>
         <Description content={content}/>
         <div>
             <i>Clients can enter journal entries here</i>

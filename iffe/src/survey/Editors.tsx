@@ -9,12 +9,12 @@ import {
     ParagraphQuestion,
     SectionHeader,
     TextBlock,
-    TextQuestion,
+    TextQuestion, TextWithOptionalAudio,
     YesNoQuestion
 } from "./SurveyContent";
 import { Editor, EditorProps, QuestionEditor } from "./QuestionEditor";
 import Typography from "@material-ui/core/Typography";
-import { EditableText } from "./EditableText";
+import { EditableText, extractText } from "./EditableText";
 import React, { forwardRef, useContext, useEffect, useRef } from "react";
 import { EditableTextArray } from "./EditableTextArray";
 import {
@@ -34,6 +34,12 @@ import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
 import { sharedStyles } from "./styles";
 import { usePopupMenu } from "./PopupMenu";
 
+function wrapText(text: string | undefined): {text: string} | undefined;
+function wrapText(text: string): {text: string};
+function wrapText(text: string | undefined) {
+    return text ? {text} : undefined;
+}
+
 const SectionHeaderEditor: Editor<SectionHeader> = ({content, modify}) => {
     const classes = useStyles();
     const {hasSingleSection} = useContext(EditorContext);
@@ -41,8 +47,9 @@ const SectionHeaderEditor: Editor<SectionHeader> = ({content, modify}) => {
     return <>
         <Typography variant="h4"
                     className={classes.editableWrapper}>{!hasSingleSection && "Section: "}<EditableText
-            placeHolder="Title" text={content.title}
-            onSave={text => modify({...content, title: text})}/></Typography>
+            placeHolder="Title" text={wrapText(content.title)}
+            noAudio
+            onSave={text => modify({...content, title: extractText(text)})}/></Typography>
         <Typography className={classes.editableWrapper}><span>Description:</span><Spacer width={8}/>
             <EditableText multiLine placeHolder="Additional description of this section"
                           text={content.description}
@@ -54,7 +61,7 @@ const TextBlockEditor: Editor<TextBlock> = ({content, modify}) => {
     const classes = useStyles();
 
     return <Typography className={classes.editableWrapper}><span>Text:</span><Spacer
-        width={8}/><EditableText placeHolder="Explantory text" multiLine text={content.title}
+        width={8}/><EditableText placeHolder="Explanatory text" multiLine text={content.title}
                                  onSave={text => modify({...content, title: text})}/></Typography>;
 };
 
@@ -65,8 +72,9 @@ const TextQuestionEditor: Editor<TextQuestion> = (props) => {
     return <QuestionEditor {...props}>
         <Typography variant="body1" className={classes.editableWrapper}>Placeholder: <EditableText
             placeHolder="This can be shown to clients if they haven't entered an answer."
-            text={content.placeholder}
-            onSave={text => modify({...content, placeholder: text})}/></Typography>
+            text={wrapText(content.placeholder)}
+            noAudio
+            onSave={text => modify({...content, placeholder: extractText(text)})}/></Typography>
     </QuestionEditor>;
 };
 
@@ -85,8 +93,9 @@ const ParagraphQuestionEditor: Editor<ParagraphQuestion> = (props) => {
     return <QuestionEditor {...props}>
         <Typography variant="body1" className={classes.editableWrapper}>Placeholder: <EditableText
             placeHolder="This can be shown to clients if they haven't entered an answer."
-            text={content.placeholder}
-            onSave={text => modify({...content, placeholder: text})}/></Typography>
+            noAudio
+            text={wrapText(content.placeholder)}
+            onSave={text => modify({...content, placeholder: extractText(text)})}/></Typography>
     </QuestionEditor>;
 };
 
@@ -134,55 +143,62 @@ const CheckboxQuestionEditor: Editor<CheckboxQuestion> = (props) => {
     </QuestionEditor>;
 };
 
-const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
+interface GridEditorProps {
+    content: ChoiceGridQuestion | CheckboxGridQuestion,
+    onSaveRows: (rows: TextWithOptionalAudio[]) => void,
+    onSaveColumns: (columns: TextWithOptionalAudio[]) => void,
+    onSaveCommentsPrompt: (value?: TextWithOptionalAudio) => void
+}
+
+function GridEditor({content, onSaveRows, onSaveColumns, onSaveCommentsPrompt}: GridEditorProps) {
     const classes = useStyles();
 
-    const {content, modify} = props;
-    return <QuestionEditor {...props}>
+    return <>
         <div className={classes.choiceGridColumns}>
             <div className={classes.choiceGridColumn}>
-                <EditableTextArray heading="Rows" placeholder="Add row" entries={content.rows || []}
-                                   onSave={(rows) => modify({...content, rows})}/>
+                <EditableTextArray heading="Rows" placeholder="Add row"
+                                   entries={content.rows || []}
+                                   onSave={onSaveRows}/>
             </div>
             <div className={classes.choiceGridColumn}>
                 <EditableTextArray heading="Columns" placeholder="Add column"
-                                   entries={content.columns || []}
-                                   onSave={(columns) => modify({...content, columns})}/>
+                                   entries={content.columns?.map(wrapText) || []}
+                                   noAudio
+                                   onSave={onSaveColumns}/>
             </div>
         </div>
         <Typography variant="body1" className={classes.editableWrapper}>
             <EditableText withCheckbox label="Prompt user for additional comments"
-                          text={content.commentsPrompt} onSave={(value) => {
-                modify({...content, commentsPrompt: value});
-            }}/>
+                          text={content.commentsPrompt} onSave={onSaveCommentsPrompt}/>
         </Typography>
+    </>;
+}
+
+export function extractColumns(columns: TextWithOptionalAudio[]) {
+    return columns.map((text) => extractText(text));
+}
+
+const ChoiceGridQuestionEditor: Editor<ChoiceGridQuestion> = (props) => {
+    const {content, modify} = props;
+    return <QuestionEditor {...props}>
+        <GridEditor content={content}
+                    onSaveRows={(rows) => modify({...content, rows})}
+                    onSaveColumns={(columns) => modify({...content, columns: extractColumns(columns)})}
+                    onSaveCommentsPrompt={(commentsPrompt) => {
+                        modify({...content, commentsPrompt});
+                    }}/>
     </QuestionEditor>;
 };
 
 const CheckboxGridQuestionEditor: Editor<CheckboxGridQuestion> = (props) => {
-    const classes = useStyles();
-
     const {content, modify} = props;
 
-    return <QuestionEditor {...props}>
-        <div className={classes.choiceGridColumns}>
-            <div className={classes.choiceGridColumn}>
-                <EditableTextArray heading="Rows" placeholder="Add row" entries={content.rows || []}
-                                   onSave={(rows) => modify({...content, rows})}/>
-            </div>
-            <div className={classes.choiceGridColumn}>
-                <EditableTextArray heading="Columns" placeholder="Add column"
-                                   entries={content.columns || []}
-                                   onSave={(columns) => modify({...content, columns})}/>
-            </div>
-        </div>
-        <Typography variant="body1" className={classes.editableWrapper}>
-            <EditableText withCheckbox label="Prompt user for additional comments"
-                          text={content.commentsPrompt} onSave={(value) => {
-                modify({...content, commentsPrompt: value});
-            }}/>
-        </Typography>
-    </QuestionEditor>;
+    return <GridEditor content={content}
+                onSaveRows={(rows) => modify({...content, rows})}
+                onSaveColumns={(columns) => modify({...content, columns: extractColumns(columns)})}
+                onSaveCommentsPrompt={(commentsPrompt) => {
+                    modify({...content, commentsPrompt});
+                }}/>
 };
 
 
