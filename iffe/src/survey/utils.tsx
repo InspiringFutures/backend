@@ -1,5 +1,5 @@
 import { Content } from "./SurveyContent";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function getCountIncluding(content: Content[], index: number) {
     const item = content[index];
@@ -54,3 +54,11 @@ export const useTriggeredTimer = (callback: () => void): [() => void, () => void
         }, [storedCallback])
     ];
 }
+
+export const useWrappedRef = <T extends any>(value: T) => {
+    const ref = useRef(value);
+    useEffect(() => {
+        ref.current = value;
+    }, [value]);
+    return ref;
+};

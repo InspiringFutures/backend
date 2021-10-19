@@ -18,3 +18,8 @@ declare module 'audio-react-recorder' {
 
     export default AudioReactRecorder
 }
+
+declare module 'audio-encoder' {
+    function audioEncoder(buffer: AudioBuffer, sampleRate: number, onProgress: null, onDone: (blob: Blob) => void);
+    export default audioEncoder;
+}

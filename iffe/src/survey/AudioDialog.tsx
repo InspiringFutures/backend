@@ -1,21 +1,22 @@
-import React, { forwardRef, useCallback, useImperativeHandle, useState } from "react";
+import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import {
     Button,
+    CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
 } from "@material-ui/core";
-import Typography from "@material-ui/core/Typography";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
-import { useReactMediaRecorder } from "react-media-recorder";
+import audioEncoder from 'audio-encoder';
 
 import FiberManualRecordIcon from '@material-ui/icons/FiberManualRecord';
 import StopIcon from "@material-ui/icons/Stop";
 
-import { Spacer } from "./Spacer";
 import { TextWithOptionalAudio } from "./SurveyContent";
-import { extractText } from "./EditableText";
+import { extractAudio, extractText } from "./EditableText";
+import { useWrappedRef } from "./utils";
+import { Spacer } from "./Spacer";
 
 
 type SaveFunc = (value?: TextWithOptionalAudio) => void;
@@ -43,17 +44,39 @@ function withAudio(current: TextWithOptionalAudio, currentRecording: any) {
     };
 }
 
-function extractAudio(current: TextWithOptionalAudio) {
-    return typeof current === 'string' ? undefined : current.audio;
-}
-
-const convertToBase64 = (blob: Blob): Promise<string | undefined> => {
+const encodeBase64 = (blob: Blob): Promise<string | undefined> => {
     return new Promise((resolve, reject)=> {
         const reader = new FileReader();
         reader.readAsDataURL(blob);
         reader.onload = () => resolve(reader.result?.toString());
         reader.onerror = error => reject(error);
     });
+}
+
+
+enum Status {
+    Stopped = 'Stopped',
+    Recording = 'Recording',
+    Processing = 'Processing',
+}
+
+function getStream(constraints?: MediaStreamConstraints) {
+    if (!constraints) {
+        constraints = { audio: true, video: false }
+    }
+
+    return navigator.mediaDevices.getUserMedia(constraints);
+}
+
+function mergeBuffers(buffers: Float32Array[]) {
+    const length = buffers.reduce((sum, buffer) => sum + buffer.length, 0);
+    const result = new Float32Array(length);
+    let offset = 0;
+    buffers.forEach((buffer) => {
+        result.set(buffer, offset);
+        offset += buffer.length;
+    });
+    return result
 }
 
 export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
@@ -63,46 +86,90 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
     const close = useCallback(() => setOpen(false), [setOpen]);
 
     const [current, setCurrent] = useState<TextWithOptionalAudio>();
-    const [onSave, setOnSave] = useState<SaveFunc>();
+    const onSave = useRef<SaveFunc>();
 
     const [currentRecording, setCurrentRecording] = useState<string>();
 
-    const {
-        status,
-        startRecording,
-        stopRecording,
-        mediaBlobUrl,
-    } = useReactMediaRecorder({
-        audio: true,
-        video: false,
-        blobPropertyBag: {type: 'audio/mp4'},
-        onStop,
-    });
-
     useImperativeHandle(ref, () => ({
-        open: (current, onSave) => {
+        open: (current, onSaveUnsafe) => {
             setOpen(true);
             setCurrent(current);
-            setOnSave(onSave);
-            setCurrentRecording(extractAudio(current));
+            onSave.current = onSaveUnsafe;
+            const audio = extractAudio(current);
+            setCurrentRecording(audio);
         },
     }), [setOpen]);
 
+    const [status, setStatus] = useState<Status>(Status.Stopped);
+
     function deleteAudio() {
-        onSave?.(withoutAudio(current));
+        onSave.current?.(withoutAudio(current));
         close();
     }
 
     function saveAudio() {
-        current && onSave?.(withAudio(current, currentRecording));
+        current && onSave.current?.(withAudio(current, currentRecording));
         close();
     }
 
-    async function onStop(blobUrl: string, blob: Blob) {
-        const audio = await convertToBase64(blob);
-        const header = (await blob.text()).substring(0, 200);
-        console.log("Recording", blobUrl, blob, header);
-        setCurrentRecording(audio);
+    const recording = useWrappedRef(status === Status.Recording);
+    const contents = useRef<Float32Array[]>([]);
+    const sampleRate = useRef(0);
+    const stream = useRef<MediaStream>();
+    const audioInput = useRef<MediaStreamAudioSourceNode>();
+    const recorder = useRef<ScriptProcessorNode>();
+
+    async function startRecording() {
+        setStatus(Status.Recording);
+        stream.current = await getStream();
+
+        const context = new AudioContext();
+        sampleRate.current = context.sampleRate;
+
+        audioInput.current = context.createMediaStreamSource(stream.current);
+        const bufferSize = 2048;
+        recorder.current = context.createScriptProcessor(bufferSize, 1, 1);
+
+        audioInput.current.connect(recorder.current);
+
+        recorder.current.connect(context.destination);
+
+        contents.current = [];
+
+        recorder.current.onaudioprocess = (e) => {
+            if (!recording.current) {
+                // Nothing left to do
+                return;
+            }
+            const input = e.inputBuffer.getChannelData(0);
+            contents.current.push(new Float32Array(input));
+        }
+    }
+
+    async function stopRecording() {
+        setStatus(Status.Processing);
+        recording.current = false;
+
+        stream.current?.getAudioTracks().forEach((track) => {
+            track.stop()
+        })
+        audioInput.current?.disconnect(0);
+        recorder.current?.disconnect(0);
+
+        const finalBuffer = mergeBuffers(contents.current);
+        contents.current = [];
+
+        const context = new AudioContext();
+        const buffer = context.createBuffer(1, finalBuffer.length, sampleRate.current);
+        buffer.copyToChannel(finalBuffer, 0);
+
+        audioEncoder(buffer, 64, null, async (blob: Blob) => {
+            const audio = await encodeBase64(blob);
+            const header = (await blob.text()).substring(0, 200);
+            console.log("Recording", blob, header);
+            setCurrentRecording(audio);
+            setStatus(Status.Stopped);
+        });
     }
 
     return (
@@ -116,18 +183,36 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
                 <p>{extractText(current)}</p>
             </DialogTitle>
             <DialogContent dividers>
-                {status === "recording" && <div>
+                {status === Status.Recording && <div className={classes.reviewRow}>
+                    <CircularProgress size={24} />
+                    <Spacer />
                     Recording...
+                    <Spacer />
                     <Button startIcon={<StopIcon />} onClick={stopRecording}>
                         Stop
                     </Button>
                 </div>}
-                {status !== "recording" && <div>
-                    <Button startIcon={<FiberManualRecordIcon />} onClick={startRecording}>
-                        Record
-                    </Button>
-                    <br />
-                    {mediaBlobUrl && <audio src={mediaBlobUrl} controls />}
+                {status === Status.Stopped && (
+                    currentRecording ?
+                        <div className={classes.reviewRow}>
+                            <audio src={currentRecording} controls />
+                            <Spacer />
+                            <Button startIcon={<FiberManualRecordIcon />} onClick={startRecording}>
+                                Re-record
+                            </Button>
+                        </div>
+                    :
+                        <div>
+                            <Button startIcon={<FiberManualRecordIcon />} onClick={startRecording} variant="contained" size="large" style={{width: '100%', backgroundColor: '#c22', color: 'white'}}>
+                                Record
+                            </Button>
+                        </div>
+                    )
+                }
+                {status === Status.Processing && <div className={classes.reviewRow}>
+                    <Spacer />
+                    <CircularProgress size={24} />
+                    <Spacer />
                 </div>}
             </DialogContent>
             <DialogActions>
@@ -135,7 +220,7 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
                     Delete
                 </Button>}
                 <Button onClick={close}>
-                    Close
+                    {(current && extractAudio(current)) === currentRecording ? "Close" : "Cancel"}
                 </Button>
                 {currentRecording && <Button onClick={saveAudio} color="primary">
                     Save
@@ -150,6 +235,10 @@ const useStyles = makeStyles((theme: Theme) =>
         previewTitle: {
             display: 'flex',
             flexDirection: 'row',
+        },
+        reviewRow: {
+            display: 'flex',
+            alignItems: 'center',
         },
     }),
 );

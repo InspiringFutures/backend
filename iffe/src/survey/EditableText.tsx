@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { Checkbox, IconButton, TextareaAutosize, TextField } from "@material-ui/core";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
-import clsx from  'clsx';
+import clsx from 'clsx';
 
 import CancelIcon from "@material-ui/icons/Cancel";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
@@ -20,6 +20,7 @@ import { Spacer } from "./Spacer";
 import { sharedStyles } from "./styles";
 import { TextWithOptionalAudio } from "./SurveyContent";
 import { AudioContext } from "./SurveyEditor";
+import { useWrappedRef } from "./utils";
 
 export interface SaveOptions {
     movement?: number;
@@ -52,14 +53,6 @@ type EditableTextAction =
     | { type: "update"; value: string }
     ;
 
-const useWrappedRef = <T extends any>(value: T) => {
-    const ref = useRef(value);
-    useEffect(() => {
-        ref.current = value;
-    }, [value]);
-    return ref;
-};
-
 export function extractText(value: TextWithOptionalAudio): string;
 export function extractText(value: undefined): undefined;
 export function extractText(value: TextWithOptionalAudio | undefined): string | undefined;
@@ -72,6 +65,10 @@ export function extractText(value?: TextWithOptionalAudio) {
 
 function updateValue(current: TextWithOptionalAudio | undefined, text: string) {
     return current === undefined || typeof current === 'string' ? text : {...current, text};
+}
+
+export function extractAudio(current: TextWithOptionalAudio) {
+    return typeof current === 'string' ? undefined : current.audio;
 }
 
 export function EditableText({
@@ -200,9 +197,10 @@ export function EditableText({
     const audioContext = useContext(AudioContext);
     function recordVoiceOver() {
         if (audioContext.audioDialog?.current && text) {
-            audioContext.audioDialog.current.open(text, onSaveUnsafe);
+            audioContext.audioDialog.current.open(text, onSave.current);
         }
     }
+    const audio = text && extractAudio(text);
 
     const labelElement = label && <>{selected ?
         <em className={classes.editableLabelSelected}>{label}:</em> : label}<Spacer width={8}/></>;
@@ -233,6 +231,7 @@ export function EditableText({
                     {checkboxContent} {labelElement}
                     {!noAudio && nonEmpty && (
                         <RecordVoiceOverIcon className={clsx(classes.floatRight, classes.cheapIconButton)}
+                                             color={audio ? 'primary' : undefined}
                                              onClick={recordVoiceOver} />
                     )}
                     {text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(extractText(text))}
@@ -245,7 +244,7 @@ export function EditableText({
                 {text === undefined ?
                     <i className={classes.placeholder}>{placeHolder}</i> : extractText(text)}
                 <Spacer/>
-                {!noAudio && nonEmpty && <RecordVoiceOverIcon className={classes.cheapIconButton} onClick={recordVoiceOver} />}
+                {!noAudio && nonEmpty && <RecordVoiceOverIcon className={classes.cheapIconButton} color={audio ? 'primary' : undefined} onClick={recordVoiceOver} />}
                 {onDelete.current && <DeleteIcon className={classes.cheapIconButton}
                                                  onClick={() => onDelete.current && onDelete.current()}/>}
             </span>;
@@ -300,13 +299,13 @@ const useStyles = makeStyles((theme: Theme) =>
         },
         cheapIconButton: {
             borderRadius: '50%',
-            color: 'rgba(0,0,0,0.54)',
+            opacity: 0.65,
             padding: 3,
             cursor: 'pointer',
             width: 30,
             height: 30,
             '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.04)',
+                backgroundColor: 'rgba(0,0,0,0.1)',
             },
         },
         floatRight: {
