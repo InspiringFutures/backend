@@ -1,13 +1,25 @@
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import React, {
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState
+} from "react";
 import { Checkbox, IconButton, TextareaAutosize, TextField } from "@material-ui/core";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
+import clsx from  'clsx';
+
 import CancelIcon from "@material-ui/icons/Cancel";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import DeleteIcon from "@material-ui/icons/Delete";
+import RecordVoiceOverIcon from '@material-ui/icons/RecordVoiceOver';
 
 import { Spacer } from "./Spacer";
 import { sharedStyles } from "./styles";
 import { TextWithOptionalAudio } from "./SurveyContent";
+import { AudioContext } from "./SurveyEditor";
 
 export interface SaveOptions {
     movement?: number;
@@ -169,7 +181,8 @@ export function EditableText({
         }
     };
 
-    const selected = state.isEditing || (text !== undefined && extractText(text) !== "");
+    const nonEmpty = text !== undefined && extractText(text) !== "";
+    const selected = state.isEditing || nonEmpty;
     const checkboxContent = withCheckbox ? <>
         <Checkbox className={classes.editableCheckbox} checked={selected}
                   onChange={(_, checked) => {
@@ -183,6 +196,13 @@ export function EditableText({
                       }
                   }}/>
     </> : null;
+
+    const audioContext = useContext(AudioContext);
+    function recordVoiceOver() {
+        if (audioContext.audioDialog?.current && text) {
+            audioContext.audioDialog.current.open(text, onSaveUnsafe);
+        }
+    }
 
     const labelElement = label && <>{selected ?
         <em className={classes.editableLabelSelected}>{label}:</em> : label}<Spacer width={8}/></>;
@@ -208,20 +228,24 @@ export function EditableText({
                         onClick={() => save()}><CheckCircleIcon/></IconButton>
         </span>
         : multiLine ?
-            <span className={classes.editableMultiline}><span
-                className={classes.editableMultilineContents}
-                onClick={startEdit}>
-                {checkboxContent} {labelElement}
-                {text === undefined ?
-                    <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(extractText(text))}</span></span>
+            <span className={classes.editableMultiline}>
+                <span className={classes.editableMultilineContents} onClick={startEdit}>
+                    {checkboxContent} {labelElement}
+                    {!noAudio && nonEmpty && (
+                        <RecordVoiceOverIcon className={clsx(classes.floatRight, classes.cheapIconButton)}
+                                             onClick={recordVoiceOver} />
+                    )}
+                    {text === undefined ? <i className={classes.placeholder}>{placeHolder}</i> : escapedNewLineToLineBreakTag(extractText(text))}
+                </span>
+            </span>
             :
-            <span className={`${classes.editableHolder} ${holderClassName ?? ""}`}
-                  onClick={startEdit}>
+            <span className={`${classes.editableHolder} ${holderClassName ?? ""}`} onClick={startEdit}>
                 {checkboxContent}
                 {labelElement}
                 {text === undefined ?
                     <i className={classes.placeholder}>{placeHolder}</i> : extractText(text)}
                 <Spacer/>
+                {!noAudio && nonEmpty && <RecordVoiceOverIcon className={classes.cheapIconButton} onClick={recordVoiceOver} />}
                 {onDelete.current && <DeleteIcon className={classes.cheapIconButton}
                                                  onClick={() => onDelete.current && onDelete.current()}/>}
             </span>;
@@ -284,6 +308,9 @@ const useStyles = makeStyles((theme: Theme) =>
             '&:hover': {
                 backgroundColor: 'rgba(0,0,0,0.04)',
             },
+        },
+        floatRight: {
+            float: 'right',
         },
     }),
 );

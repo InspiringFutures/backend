@@ -1,4 +1,13 @@
-import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import React, {
+    createContext,
+    Ref,
+    RefObject,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState
+} from 'react';
 import {
     DragDropContext,
     Draggable,
@@ -32,6 +41,7 @@ import { ContentEditor } from "./Editors";
 import { saveSurvey, SurveyInfo } from "./api";
 import { ImportDialog } from './ImportDialog';
 import { ModifyFunction } from "./QuestionEditor";
+import { AudioDialog, AudioDialogRef } from "./AudioDialog";
 
 interface SurveyEditorProps
 {
@@ -75,6 +85,8 @@ function WrapContentEditor({content, provided, getModifyFor, index}: WrapContent
                           modify={modify}/>;
 }
 
+export const AudioContext = createContext<{audioDialog: RefObject<AudioDialogRef> | null}>({audioDialog: null});
+
 export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
     const classes = useStyles();
 
@@ -82,6 +94,7 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
     const [editorState, editorDispatch] = useReducer(editorReducer, {});
     const previewDialog = useRef<MakeDialog>(null);
     const importDialog = useRef<MakeDialog>(null);
+    const audioDialog = useRef<AudioDialogRef>(null);
     const {enqueueSnackbar} = useSnackbar();
     const [saving, setSaving] = useState(false);
 
@@ -207,97 +220,100 @@ export function SurveyEditor({surveyInfo}: SurveyEditorProps) {
     }, [actions, content]);
 
     return (<ThemeProvider theme={theme}>
-        <DragDropContext onDragEnd={onDragEnd}>
-            <div className={classes.root}>
-                <MakeDialog ref={previewDialog}>{({isOpen, open, close}) => <PreviewDialog
-                    isOpen={isOpen} open={open} close={close} contents={content}/>}</MakeDialog>
-                <MakeDialog ref={importDialog}>{({isOpen, open, close}) => <ImportDialog
-                    isOpen={isOpen} open={open} close={close}  addContent={addContent} surveyId={surveyInfo.id}/>}</MakeDialog>
-                <AppBar position="fixed" className={classes.appBar}>
-                    <Toolbar>
-                        {window.history.length > 0 && <Button
-                            onClick={() => window.history.back()}>
-                            <ArrowBackIcon className={classes.backArrow}/>
-                        </Button>}
-                        <Spacer width={16}/>
-                        <Typography variant="h6" noWrap>
-                            {surveyInfo.name}
-                        </Typography>
-                        <Spacer/>
-                        <Button variant="contained"
-                                onClick={() => importDialog.current && importDialog.current.open()}>
-                            Import
-                        </Button>
-                        <Spacer width={16}/>
-                        <Button variant="contained"
-                                onClick={() => previewDialog.current && previewDialog.current.open()}>
-                            Preview
-                        </Button>
-                        <Spacer width={16}/>
-                        <Button variant="contained" startIcon={<UndoIcon/>} disabled={!canUndo}
-                                onClick={() => actions.undo()}>
-                            Undo
-                        </Button>
-                        <Spacer width={8}/>
-                        <Button variant="contained" startIcon={<RedoIcon/>} disabled={!canRedo}
-                                onClick={() => actions.redo()}>
-                            Redo
-                        </Button>
-                        <Spacer width={16}/>
-                        <Button variant="contained" startIcon={saving ? <CircularProgress /> : <SaveIcon/>} disabled={!dirty || saving} onClick={() => save()}>
-                            {saving ? "Saving": "Save"}
-                        </Button>
-                    </Toolbar>
-                </AppBar>
-                <Droppable droppableId="main">
-                    {(provided) =>
-                        <main className={classes.content} ref={provided.innerRef}>
-                            <EditorContext.Provider value={{
-                                state: editorState,
-                                dispatch: editorDispatch,
-                                hasSingleSection
-                            }}>
-                                {content.map((c, index) => <Draggable key={c.id} draggableId={c.id}
-                                                                      index={index}
-                                                                      isDragDisabled={hasSingleSection && c.type === 'SectionHeader'}>
-                                    {(provided) =>
-                                        <WrapContentEditor content={c} provided={provided} getModifyFor={getModifyFor} index={index} />
-                                    }</Draggable>)}
-                            </EditorContext.Provider>
-                            {provided.placeholder}
-                            {content.length === 0 && <div className={classes.introductionWrapper}>
-                                <div>
-                                    <h4>Welcome to the Inspiring Futures Survey Editor</h4>
-                                    <p>Add questions by:</p>
-                                    <ul>
-                                        <li>clicking on the type of question you want from the palette on the right,</li>
-                                        <li>dragging questions from the palette on the right, or</li>
-                                        <li>clicking 'Import' to bring in questions from another survey.</li>
-                                    </ul>
-                                </div>
-                            </div>}
-                        </main>
-                    }
-                </Droppable>
-                <Drawer
-                    className={classes.drawer}
-                    variant="permanent"
-                    classes={{
-                        paper: classes.drawerPaper,
-                    }}
-                    anchor="right"
-                >
-                    <Toolbar/>
-                    <div className={classes.drawerContainer}>
-                        <Sidebar addItem={(newItem) => {
-                            const newContent = [...content, newItem];
-                            actions.set(newContent);
-                            editorDispatch({type: "focus", on: newItem.id});
-                        }}/>
-                    </div>
-                </Drawer>
-            </div>
-        </DragDropContext>
+        <AudioContext.Provider value={{audioDialog}}>
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div className={classes.root}>
+                    <MakeDialog ref={previewDialog}>{({isOpen, open, close}) => <PreviewDialog
+                        isOpen={isOpen} open={open} close={close} contents={content}/>}</MakeDialog>
+                    <MakeDialog ref={importDialog}>{({isOpen, open, close}) => <ImportDialog
+                        isOpen={isOpen} open={open} close={close}  addContent={addContent} surveyId={surveyInfo.id}/>}</MakeDialog>
+                    <AudioDialog ref={audioDialog} />
+                    <AppBar position="fixed" className={classes.appBar}>
+                        <Toolbar>
+                            {window.history.length > 0 && <Button
+                                onClick={() => window.history.back()}>
+                                <ArrowBackIcon className={classes.backArrow}/>
+                            </Button>}
+                            <Spacer width={16}/>
+                            <Typography variant="h6" noWrap>
+                                {surveyInfo.name}
+                            </Typography>
+                            <Spacer/>
+                            <Button variant="contained"
+                                    onClick={() => importDialog.current && importDialog.current.open()}>
+                                Import
+                            </Button>
+                            <Spacer width={16}/>
+                            <Button variant="contained"
+                                    onClick={() => previewDialog.current && previewDialog.current.open()}>
+                                Preview
+                            </Button>
+                            <Spacer width={16}/>
+                            <Button variant="contained" startIcon={<UndoIcon/>} disabled={!canUndo}
+                                    onClick={() => actions.undo()}>
+                                Undo
+                            </Button>
+                            <Spacer width={8}/>
+                            <Button variant="contained" startIcon={<RedoIcon/>} disabled={!canRedo}
+                                    onClick={() => actions.redo()}>
+                                Redo
+                            </Button>
+                            <Spacer width={16}/>
+                            <Button variant="contained" startIcon={saving ? <CircularProgress /> : <SaveIcon/>} disabled={!dirty || saving} onClick={() => save()}>
+                                {saving ? "Saving": "Save"}
+                            </Button>
+                        </Toolbar>
+                    </AppBar>
+                    <Droppable droppableId="main">
+                        {(provided) =>
+                            <main className={classes.content} ref={provided.innerRef}>
+                                <EditorContext.Provider value={{
+                                    state: editorState,
+                                    dispatch: editorDispatch,
+                                    hasSingleSection
+                                }}>
+                                    {content.map((c, index) => <Draggable key={c.id} draggableId={c.id}
+                                                                          index={index}
+                                                                          isDragDisabled={hasSingleSection && c.type === 'SectionHeader'}>
+                                        {(provided) =>
+                                            <WrapContentEditor content={c} provided={provided} getModifyFor={getModifyFor} index={index} />
+                                        }</Draggable>)}
+                                </EditorContext.Provider>
+                                {provided.placeholder}
+                                {content.length === 0 && <div className={classes.introductionWrapper}>
+                                    <div>
+                                        <h4>Welcome to the Inspiring Futures Survey Editor</h4>
+                                        <p>Add questions by:</p>
+                                        <ul>
+                                            <li>clicking on the type of question you want from the palette on the right,</li>
+                                            <li>dragging questions from the palette on the right, or</li>
+                                            <li>clicking 'Import' to bring in questions from another survey.</li>
+                                        </ul>
+                                    </div>
+                                </div>}
+                            </main>
+                        }
+                    </Droppable>
+                    <Drawer
+                        className={classes.drawer}
+                        variant="permanent"
+                        classes={{
+                            paper: classes.drawerPaper,
+                        }}
+                        anchor="right"
+                    >
+                        <Toolbar/>
+                        <div className={classes.drawerContainer}>
+                            <Sidebar addItem={(newItem) => {
+                                const newContent = [...content, newItem];
+                                actions.set(newContent);
+                                editorDispatch({type: "focus", on: newItem.id});
+                            }}/>
+                        </div>
+                    </Drawer>
+                </div>
+            </DragDropContext>
+        </AudioContext.Provider>
     </ThemeProvider>);
 }
 
