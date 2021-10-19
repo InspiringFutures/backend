@@ -23,3 +23,11 @@ declare module 'audio-encoder' {
     function audioEncoder(buffer: AudioBuffer, sampleRate: number, onProgress: null, onDone: (blob: Blob) => void);
     export default audioEncoder;
 }
+
+declare module 'lamejs' {
+    class Mp3Encoder {
+        constructor(channels: number, sampleRate: numebr, kbps: number);
+        encodeBuffer(buffer: Int16Array);
+        flush();
+    }
+}

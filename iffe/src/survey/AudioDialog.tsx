@@ -8,7 +8,7 @@ import {
     DialogTitle,
 } from "@material-ui/core";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
-import audioEncoder from 'audio-encoder';
+import { Mp3Encoder } from 'lamejs';
 
 import FiberManualRecordIcon from '@material-ui/icons/FiberManualRecord';
 import StopIcon from "@material-ui/icons/Stop";
@@ -67,6 +67,8 @@ function getStream(constraints?: MediaStreamConstraints) {
 
     return navigator.mediaDevices.getUserMedia(constraints);
 }
+
+const MAX_AMPLITUDE = 0x7FFF;
 
 function mergeBuffers(buffers: Float32Array[]) {
     const length = buffers.reduce((sum, buffer) => sum + buffer.length, 0);
@@ -163,13 +165,28 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
         const buffer = context.createBuffer(1, finalBuffer.length, sampleRate.current);
         buffer.copyToChannel(finalBuffer, 0);
 
-        audioEncoder(buffer, 64, null, async (blob: Blob) => {
-            const audio = await encodeBase64(blob);
-            const header = (await blob.text()).substring(0, 200);
-            console.log("Recording", blob, header);
-            setCurrentRecording(audio);
-            setStatus(Status.Stopped);
-        });
+        const data = [];
+        const encoder = new Mp3Encoder(1, sampleRate.current, 64);
+        const samples = new Int16Array(finalBuffer.length);
+
+        for (var i = 0; i < finalBuffer.length; ++i) {
+            var sample = finalBuffer[i];
+
+            // clamp and convert to 16bit number
+            sample = Math.min(1, Math.max(-1, sample));
+            sample = Math.round(sample * MAX_AMPLITUDE);
+
+            samples[i] = sample;
+        }
+        data.push(encoder.encodeBuffer(samples));
+        data.push(encoder.flush());
+        console.log(data);
+        const blob = new Blob(data, {type: 'audio/mp3'});
+        const audio = await encodeBase64(blob);
+        const header = (await blob.text()).substring(0, 200);
+        console.log("Recording", blob, header);
+        setCurrentRecording(audio);
+        setStatus(Status.Stopped);
     }
 
     return (
