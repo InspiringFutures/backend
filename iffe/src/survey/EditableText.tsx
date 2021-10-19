@@ -195,10 +195,12 @@ export function EditableText({
     </> : null;
 
     const audioContext = useContext(AudioContext);
-    function recordVoiceOver() {
+    function recordVoiceOver(e: React.MouseEvent<SVGSVGElement, MouseEvent>) {
         if (audioContext.audioDialog?.current && text) {
             audioContext.audioDialog.current.open(text, onSave.current);
         }
+        e.preventDefault();
+        e.stopPropagation();
     }
     const audio = text && extractAudio(text);
 

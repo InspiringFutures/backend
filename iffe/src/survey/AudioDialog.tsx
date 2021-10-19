@@ -115,28 +115,27 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
     }
 
     const recording = useWrappedRef(status === Status.Recording);
-    const contents = useRef<Float32Array[]>([]);
-    const sampleRate = useRef(0);
     const stream = useRef<MediaStream>();
     const audioInput = useRef<MediaStreamAudioSourceNode>();
     const recorder = useRef<ScriptProcessorNode>();
+    const encoder = useRef<Mp3Encoder>();
+    const output = useRef<Int8Array[]>();
 
     async function startRecording() {
         setStatus(Status.Recording);
         stream.current = await getStream();
 
-        const context = new AudioContext();
-        sampleRate.current = context.sampleRate;
+        const context = new AudioContext({sampleRate: 16000});
 
         audioInput.current = context.createMediaStreamSource(stream.current);
-        const bufferSize = 2048;
-        recorder.current = context.createScriptProcessor(bufferSize, 1, 1);
+        recorder.current = context.createScriptProcessor(0, 1, 1);
 
         audioInput.current.connect(recorder.current);
 
         recorder.current.connect(context.destination);
 
-        contents.current = [];
+        encoder.current = new Mp3Encoder(1, context.sampleRate, 64);
+        output.current = [];
 
         recorder.current.onaudioprocess = (e) => {
             if (!recording.current) {
@@ -144,7 +143,19 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
                 return;
             }
             const input = e.inputBuffer.getChannelData(0);
-            contents.current.push(new Float32Array(input));
+
+            const samples = new Int16Array(input.length);
+
+            for (let i = 0; i < input.length; ++i) {
+                let sample = input[i];
+
+                // clamp and convert to 16bit number
+                sample = Math.min(1, Math.max(-1, sample));
+                sample = Math.round(sample * MAX_AMPLITUDE);
+
+                samples[i] = sample;
+            }
+            output.current?.push(encoder.current?.encodeBuffer(samples));
         }
     }
 
@@ -158,33 +169,11 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
         audioInput.current?.disconnect(0);
         recorder.current?.disconnect(0);
 
-        const finalBuffer = mergeBuffers(contents.current);
-        contents.current = [];
+        output.current?.push(encoder.current?.flush());
 
-        const context = new AudioContext();
-        const buffer = context.createBuffer(1, finalBuffer.length, sampleRate.current);
-        buffer.copyToChannel(finalBuffer, 0);
-
-        const data = [];
-        const encoder = new Mp3Encoder(1, sampleRate.current, 64);
-        const samples = new Int16Array(finalBuffer.length);
-
-        for (var i = 0; i < finalBuffer.length; ++i) {
-            var sample = finalBuffer[i];
-
-            // clamp and convert to 16bit number
-            sample = Math.min(1, Math.max(-1, sample));
-            sample = Math.round(sample * MAX_AMPLITUDE);
-
-            samples[i] = sample;
-        }
-        data.push(encoder.encodeBuffer(samples));
-        data.push(encoder.flush());
-        console.log(data);
-        const blob = new Blob(data, {type: 'audio/mp3'});
+        const blob = new Blob(output.current, {type: 'audio/mp3'});
         const audio = await encodeBase64(blob);
-        const header = (await blob.text()).substring(0, 200);
-        console.log("Recording", blob, header);
+
         setCurrentRecording(audio);
         setStatus(Status.Stopped);
     }
@@ -200,15 +189,25 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
                 <p>{extractText(current)}</p>
             </DialogTitle>
             <DialogContent dividers>
-                {status === Status.Recording && <div className={classes.reviewRow}>
-                    <CircularProgress size={24} />
-                    <Spacer />
-                    Recording...
-                    <Spacer />
-                    <Button startIcon={<StopIcon />} onClick={stopRecording}>
-                        Stop
-                    </Button>
-                </div>}
+                {status === Status.Recording && (
+                    currentRecording ?
+                        <div className={classes.reviewRow}>
+                            <CircularProgress size={24} />
+                            <Spacer />
+                            Recording...
+                            <Spacer />
+                            <Button startIcon={<StopIcon />} onClick={stopRecording}>
+                                Stop
+                            </Button>
+                        </div>
+                    :
+                        <div>
+                            <Button startIcon={<StopIcon />} endIcon={<CircularProgress size={24} />} onClick={stopRecording} size="large" style={{width: '100%'}}>
+                                Recording...
+                            </Button>
+                        </div>
+                    )
+                }
                 {status === Status.Stopped && (
                     currentRecording ?
                         <div className={classes.reviewRow}>
