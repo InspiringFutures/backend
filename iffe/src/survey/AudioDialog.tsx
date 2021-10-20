@@ -202,7 +202,7 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
                         </div>
                     :
                         <div>
-                            <Button startIcon={<StopIcon />} endIcon={<CircularProgress size={24} />} onClick={stopRecording} size="large" style={{width: '100%'}}>
+                            <Button startIcon={<StopIcon />} onClick={stopRecording} size="large" style={{width: '100%'}}>
                                 Recording...
                             </Button>
                         </div>

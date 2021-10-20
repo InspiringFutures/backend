@@ -26,17 +26,18 @@ import {
     ConsentQuestion,
     Content,
     JournalQuestion,
-    ParagraphQuestion,
+    ParagraphQuestion, Question,
     SectionHeader,
     TextBlock,
     TextQuestion,
     TextWithOptionalAudio,
     YesNoQuestion
 } from "./SurveyContent";
-import { escapedNewLineToLineBreakTag, extractText } from "./EditableText";
+import { escapedNewLineToLineBreakTag, extractAudio, extractText } from "./EditableText";
 
 import RadioButtonUncheckedIcon from "@material-ui/icons/RadioButtonUnchecked";
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
+import RecordVoiceOverIcon from "@material-ui/icons/RecordVoiceOver";
 
 type ViewerProps<C extends Content> = {
     content: C;
@@ -44,11 +45,21 @@ type ViewerProps<C extends Content> = {
 };
 type Viewer<C extends Content> = FunctionComponent<ViewerProps<C>>;
 
+const PossibleAudioIcon = ({text}: {text: TextWithOptionalAudio | undefined}) => {
+    const classes = useStyles();
+
+    const audio = text && extractAudio(text);
+    return audio ? <RecordVoiceOverIcon className={classes.voiceIcon} /> : null;
+}
+
 const Description: Viewer<Content & {description?: TextWithOptionalAudio}> = ({content}) => {
     const classes = useStyles();
     return content.description ?
         <Typography
-            className={classes.description}>{escapedNewLineToLineBreakTag(extractText(content.description))}</Typography>
+            className={classes.description}>
+            {escapedNewLineToLineBreakTag(extractText(content.description))}
+            <PossibleAudioIcon text={content.description} />
+        </Typography>
         : null;
 };
 
@@ -61,20 +72,27 @@ const SectionHeaderViewer: Viewer<SectionHeader> = ({content}) => {
 };
 
 const TextBlockViewer: Viewer<TextBlock> = ({content}) => {
-    return content.title ? <Typography>{escapedNewLineToLineBreakTag(extractText(content.title))}</Typography> :
+    return content.title ? <Typography>
+            {escapedNewLineToLineBreakTag(extractText(content.title))}
+            <PossibleAudioIcon text={content.title} />
+    </Typography> :
         <em>Empty text block</em>;
 };
 
+function QuestionLabel({content}: { content: Question }) {
+    return <>{extractText(content.title)}<PossibleAudioIcon text={content.title}/></>;
+}
+
 const TextQuestionViewer: Viewer<TextQuestion> = ({content}) => {
     return <>
-        <TextField label={extractText(content.title)} placeholder={content.placeholder} fullWidth/>
+        <TextField label={<QuestionLabel content={content}/>} placeholder={content.placeholder} fullWidth/>
         <Description content={content}/>
     </>;
 };
 
 const YesNoQuestionViewer: Viewer<YesNoQuestion> = ({content}) => {
     return <>
-        <FormLabel>{extractText(content.title)}</FormLabel>
+        <FormLabel><QuestionLabel content={content}/></FormLabel>
         <RadioGroup>
             <FormControlLabel value="yes" control={<Radio/>} label="Yes"/>
             <FormControlLabel value="no" control={<Radio/>} label="No"/>
@@ -86,14 +104,14 @@ const YesNoQuestionViewer: Viewer<YesNoQuestion> = ({content}) => {
 const ConsentQuestionViewer: Viewer<ConsentQuestion> = ({content}) => {
     return <>
         <Typography variant="body1">Please tick to show you agree to the following:</Typography>
-        <FormControlLabel label={extractText(content.title)} control={<Checkbox/>}/>
+        <FormControlLabel label={<QuestionLabel content={content}/>} control={<Checkbox/>}/>
         <Description content={content}/>
     </>;
 };
 
 const ParagraphQuestionViewer: Viewer<ParagraphQuestion> = ({content}) => {
     return <>
-        <TextField label={extractText(content.title)} placeholder={content.placeholder} fullWidth multiline
+        <TextField label={<QuestionLabel content={content}/>} placeholder={content.placeholder} fullWidth multiline
                    rows={4} rowsMax={10}/>
         <Description content={content}/>
     </>;
@@ -105,7 +123,7 @@ const ChoiceQuestionViewer: Viewer<ChoiceQuestion> = ({content}) => {
 
     let selectOther = () => setValue("other");
     return <FormControl>
-        <FormLabel>{extractText(content.title)}</FormLabel>
+        <FormLabel><QuestionLabel content={content}/></FormLabel>
         <Description content={content}/>
         {choices.length > 0 ?
             <RadioGroup value={value} onChange={(e) => setValue(e.currentTarget.value)}>
@@ -129,7 +147,7 @@ const CheckboxQuestionViewer: Viewer<CheckboxQuestion> = ({content}) => {
     const otherRef = useRef<HTMLInputElement>(null);
 
     return <FormControl>
-        <FormLabel>{extractText(content.title)}</FormLabel>
+        <FormLabel><QuestionLabel content={content}/></FormLabel>
         <Description content={content}/>
         {choices.length > 0 ?
             <>
@@ -150,6 +168,10 @@ const CheckboxQuestionViewer: Viewer<CheckboxQuestion> = ({content}) => {
         }
     </FormControl>;
 };
+
+function GridCommentsLabel({content}: { content: ChoiceGridQuestion | CheckboxGridQuestion }) {
+    return <>{extractText(content.commentsPrompt)}<PossibleAudioIcon text={content.commentsPrompt}/></>;
+}
 
 const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content, active}) => {
     const rows = useMemo(() => content.rows || [], [content.rows]);
@@ -185,7 +207,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content, active})
     }
 
     return <>
-        <FormLabel>{extractText(content.title)}</FormLabel>
+        <FormLabel><QuestionLabel content={content}/></FormLabel>
         <Description content={content}/>
         {rows.length > 0 && columns.length > 0 ?
             <table>
@@ -206,7 +228,7 @@ const ChoiceGridQuestionViewer: Viewer<ChoiceGridQuestion> = ({content, active})
             </table>
             : <div><em>No rows/columns defined</em></div>}
         {content.commentsPrompt &&
-        <TextField label={extractText(content.commentsPrompt)} fullWidth multiline rows={4} rowsMax={10}/>
+        <TextField label={<GridCommentsLabel content={content}/>} fullWidth multiline rows={4} rowsMax={10}/>
         }
     </>;
 };
@@ -237,7 +259,7 @@ const CheckboxGridQuestionViewer: Viewer<CheckboxGridQuestion> = ({content, acti
             </table>
             : <div><em>No rows/columns defined</em></div>}
         {content.commentsPrompt &&
-            <TextField label={extractText(content.commentsPrompt)} fullWidth multiline rows={4} rowsMax={10}/>
+            <TextField label={<GridCommentsLabel content={content}/>} fullWidth multiline rows={4} rowsMax={10}/>
         }
     </>;
 };
@@ -275,6 +297,9 @@ const useStyles = makeStyles((theme: Theme) =>
     createStyles({
         description: {
             color: '#37474f',
+        },
+        voiceIcon: {
+            float: 'right',
         },
     }),
 );
