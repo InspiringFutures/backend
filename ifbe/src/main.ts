@@ -28,7 +28,7 @@ async function bootstrap() {
     resave: false,
   }));
   app.use(bodyParser.urlencoded({extended: true }));
-  app.use(bodyParser.json());
+  app.use(bodyParser.json({limit: '30mb'}));
   const csurfHandler = csurf();
   app.use((req, res, next) => {
     if (req.url.startsWith('/api/') || req.url.startsWith('/login/')) {
