@@ -18,7 +18,7 @@ import { GroupPermission } from './model/groupPermission.model';
 import { JournalService } from './service/journal.service';
 import { Journal } from './model/journal.model';
 import { JournalEntry } from './model/journalEntry.model';
-import { StorageService, StorageServiceProvider } from './service/storage.service';
+import { ClientMediaService, ClientMediaServiceProvider } from './service/clientMedia.service';
 import { ClientService } from './service/client.service';
 import { QRController } from './controller/qr.controller';
 import { Token } from './model/token.model';
@@ -42,8 +42,8 @@ require('pg').types.setTypeParser(1114, function(stringValue) {
 const MODELS = [Group, Client, Admin, GroupPermission, Journal, JournalEntry, Token, Survey, SurveyPermission, SurveyVersion, SurveyAllocation, Answer];
 
 @Module({
-    providers: [StorageServiceProvider],
-    exports: [StorageService],
+    providers: [ClientMediaServiceProvider],
+    exports: [ClientMediaService],
 })
 class StorageModule {}
 
@@ -62,8 +62,8 @@ class StorageModule {}
       StorageModule,
       MulterModule.registerAsync({
           imports: [StorageModule],
-          inject: [StorageService],
-          useFactory: async (storageService: StorageService) => ({
+          inject: [ClientMediaService],
+          useFactory: async (storageService: ClientMediaService) => ({
               storage: storageService.multerStorage(),
               limits: {
                 fieldSize: 100000000,
@@ -73,7 +73,7 @@ class StorageModule {}
       }),
   ],
   controllers: [GroupController, ClientController, RootController, LoginController, AdminController, QRController, SurveyController, GroupAdminController],
-  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, StorageServiceProvider, ClientService, SurveyService, PushNotificationService, SurveyAllocationService],
+  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, ClientMediaServiceProvider, ClientService, SurveyService, PushNotificationService, SurveyAllocationService],
 })
 export class AppModule {
     configure(consumer: MiddlewareConsumer) {

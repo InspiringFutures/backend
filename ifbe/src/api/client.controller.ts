@@ -23,7 +23,7 @@ import { Group } from '../model/group.model';
 import { InjectModel } from '@nestjs/sequelize';
 import { Answer } from '../model/answer.model';
 import { SurveyContent } from '../model/SurveyContent';
-import { StorageService } from '../service/storage.service';
+import { ClientMediaService } from '../service/clientMedia.service';
 import { SurveyAllocation } from '../model/surveyAllocation.model';
 
 export function extractCheckClientDTO(client: Client) {
@@ -41,7 +41,7 @@ export class ClientController {
         private groupService: GroupService,
         @InjectModel(Answer)
         private answerModel: typeof Answer,
-        private storageService: StorageService,
+        private storageService: ClientMediaService,
 ) {}
 
     @Post('check')

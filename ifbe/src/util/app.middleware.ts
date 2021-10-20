@@ -6,7 +6,7 @@ import { join } from 'path';
 export class AppMiddleware implements NestMiddleware {
     use(req: Request, res: Response, next: () => void) {
         if (req.path.match(/^\/survey\/[0-9]+\/edit$/)) {
-            res.cookie('CSRF-TOKEN', req.csrfToken());
+            req.csrfToken && res.cookie('CSRF-TOKEN', req.csrfToken());
             res.sendFile(join(process.cwd(), '../iffe/build/index.html'));
         } else if (req.path.startsWith('/static/')) {
             // change the path to the correct html page path in your project

@@ -12,7 +12,7 @@ const fs = Promise.promisifyAll(require('fs'));
 import { AppModule } from '../src/app.module';
 import { JournalService } from "../src/service/journal.service";
 import client from '../src/views/admin/client';
-import { StorageService } from '../src/service/storage.service';
+import { ClientMediaService } from '../src/service/clientMedia.service';
 
 const httpGet: (url: string) => Promise<{ body: string, headers: IncomingHttpHeaders }> = (url: string) => {
   return new Promise((resolve, reject) => {
@@ -230,7 +230,7 @@ describe('Uploads from clients (e2e)', () => {
 
 
     it('Can delete media journal', async () => {
-        const storageService = app.get(StorageService);
+        const storageService = app.get(ClientMediaService);
 
         const existingContents = await storageService._test_listing();
 

@@ -9,7 +9,7 @@ interface S3Config {
     container: string;
 }
 
-export class StorageService{
+export class ClientMediaService {
     private s3: aws.S3;
     constructor(private config: S3Config) {
         this.s3 = new aws.S3({
@@ -75,14 +75,14 @@ export class StorageService{
     }
 }
 
-export const StorageServiceProvider = {
-    provide: StorageService,
+export const ClientMediaServiceProvider = {
+    provide: ClientMediaService,
     useFactory: async () => {
-        return new StorageService({
+        return new ClientMediaService({
             url: process.env.S3_URL,
             accessKey: process.env.S3_ACCESS_KEY,
             accessSecret: process.env.S3_ACCESS_SECRET,
-            container: process.env.S3_CONTAINER,
+            container: process.env.S3_CLIENT_MEDIA_CONTAINER,
         });
     },
 };

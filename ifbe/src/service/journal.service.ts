@@ -6,7 +6,7 @@ import { Client } from "../model/client.model";
 import { Take } from "../util/types";
 import { Journal } from "../model/journal.model";
 import { JournalEntry } from "../model/journalEntry.model";
-import { StorageService } from "./storage.service";
+import { ClientMediaService } from "./clientMedia.service";
 import { Group } from '../model/group.model';
 import moment from "moment";
 import { Content, Question } from '../model/SurveyContent';
@@ -51,7 +51,7 @@ export function formatDate(date: Date) {
 export class JournalService {
     constructor(
         @InjectModel(Journal) private journalModel: typeof Journal,
-        private storageService: StorageService,
+        private storageService: ClientMediaService,
     ) {}
 
     private static extractEntries(journal: JournalContents) {

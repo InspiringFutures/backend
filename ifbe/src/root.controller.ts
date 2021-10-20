@@ -5,7 +5,7 @@ import { Group } from "./model/group.model";
 import { Controller, Page } from './util/autopage';
 import { UserService } from "./service/user.service";
 import { redirect } from "./util/redirect";
-import { StorageService } from './service/storage.service';
+import { ClientMediaService } from './service/clientMedia.service';
 
 @Controller('')
 @Injectable()
@@ -14,7 +14,7 @@ export class RootController {
         @InjectModel(Group)
         private groupModel: typeof Group,
         private userService: UserService,
-        private storageService: StorageService,
+        private storageService: ClientMediaService,
     ) {}
 
     @Get()
