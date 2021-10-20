@@ -52,7 +52,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  if (process.env.BASE_URL === "http://localhost:8115") {
+  if (process.env.BASE_URL === "https://lcifdev.loca.lt") {
     app.enableCors();
   }
   await app.listen(8115);
