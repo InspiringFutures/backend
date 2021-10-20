@@ -71,17 +71,6 @@ function getStream(constraints?: MediaStreamConstraints) {
 
 const MAX_AMPLITUDE = 0x7FFF;
 
-function mergeBuffers(buffers: Float32Array[]) {
-    const length = buffers.reduce((sum, buffer) => sum + buffer.length, 0);
-    const result = new Float32Array(length);
-    let offset = 0;
-    buffers.forEach((buffer) => {
-        result.set(buffer, offset);
-        offset += buffer.length;
-    });
-    return result
-}
-
 export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
     const classes = useStyles();
 
