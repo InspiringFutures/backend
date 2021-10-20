@@ -17,6 +17,7 @@ import { TextWithOptionalAudio } from "./SurveyContent";
 import { extractAudio, extractText } from "./EditableText";
 import { useWrappedRef } from "./utils";
 import { Spacer } from "./Spacer";
+import { endpoint } from "./api";
 
 
 type SaveFunc = (value?: TextWithOptionalAudio) => void;
@@ -211,7 +212,7 @@ export const AudioDialog = forwardRef<AudioDialogRef>((props, ref) => {
                 {status === Status.Stopped && (
                     currentRecording ?
                         <div className={classes.reviewRow}>
-                            <audio src={currentRecording} controls />
+                            <audio src={currentRecording.replace('voice-over://', endpoint + '/api/voiceOver/')} controls />
                             <Spacer />
                             <Button startIcon={<FiberManualRecordIcon />} onClick={startRecording}>
                                 Re-record

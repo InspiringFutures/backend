@@ -33,6 +33,8 @@ import { SurveyAllocation } from './model/surveyAllocation.model';
 import { Answer } from './model/answer.model';
 import { PushNotificationService } from './service/pushNotification.service';
 import { SurveyAllocationService } from './service/surveyAllocation.service';
+import { VoiceOverServiceProvider } from './service/voiceOver.service';
+import { VoiceOverController } from './api/voiceOver.controller';
 
 // Fix bug with parsing timestamps from Postgres as non-local time
 require('pg').types.setTypeParser(1114, function(stringValue) {
@@ -72,8 +74,8 @@ class StorageModule {}
           }),
       }),
   ],
-  controllers: [GroupController, ClientController, RootController, LoginController, AdminController, QRController, SurveyController, GroupAdminController],
-  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, ClientMediaServiceProvider, ClientService, SurveyService, PushNotificationService, SurveyAllocationService],
+  controllers: [GroupController, ClientController, RootController, LoginController, AdminController, QRController, SurveyController, GroupAdminController, VoiceOverController],
+  providers: [GoogleServiceProvider, UserService, GroupService, JournalService, ClientMediaServiceProvider, ClientService, SurveyService, PushNotificationService, SurveyAllocationService, VoiceOverServiceProvider],
 })
 export class AppModule {
     configure(consumer: MiddlewareConsumer) {

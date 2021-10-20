@@ -29,6 +29,7 @@ import { extractAnswer, formatDatetime, UnpackedQuestion, unpackQuestions } from
 import { Journal } from '../model/journal.model';
 import { JournalEntry } from '../model/journalEntry.model';
 import { ClientJournalEntry, formatDate, JournalService } from '../service/journal.service';
+import { VoiceOverService } from '../service/voiceOver.service';
 
 function parseDateOrNull(date: string, endOfDay: boolean) {
     return date && date !== '' ? new Date(`${date}${endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'}`) : null;
@@ -49,6 +50,7 @@ export class SurveyController {
         private surveyAllocationModel: typeof SurveyAllocation,
         @InjectModel(Journal)
         private journalModel: typeof Journal,
+        private readonly voiceOverService: VoiceOverService,
     ) {}
 
     @Post()
@@ -138,6 +140,8 @@ export class SurveyController {
     async setContent(@Param('id') surveyId, @Body() content) {
         const admin = this.userService.currentUser()!;
         const survey = await this.hasSurveyAccess(surveyId, AccessLevel.edit);
+
+        await this.voiceOverService.mutateJson(content);
 
         await survey.$create('version', {content: content, creatorId: admin.id, autoSave: content.autoSave});
 
