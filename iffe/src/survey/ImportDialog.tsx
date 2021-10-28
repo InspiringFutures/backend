@@ -5,7 +5,7 @@ import {
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle, FormControlLabel, List, ListItem, ListItemIcon, ListItemText, MenuItem, Select,
+    DialogTitle, List, ListItem, ListItemIcon, ListItemText, MenuItem, Select,
 } from "@material-ui/core";
 import Typography from "@material-ui/core/Typography";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
@@ -16,7 +16,7 @@ import { InjectedDialogProps } from "./MakeDialog";
 import { loadSurvey, loadSurveys, SurveyInfo, SurveySummary } from "./api";
 import { ContentTypeInfo } from "./Sidebar";
 import { getCountIncluding } from "./utils";
-import { ModifyOptions } from "./QuestionEditor";
+import { extractText } from "./EditableText";
 
 interface ImportProps {
     addContent: (addedContent: Content[]) => void;
@@ -158,7 +158,7 @@ export function ImportDialog({
                                         {ContentTypeInfo[content.type].icon}
                                     </ListItemIcon>
                                     <ListItemText id={labelId}>
-                                        {content.title}
+                                        {extractText(content.title)}
                                     </ListItemText>
                                 </ListItem>;
                             })}
