@@ -49,7 +49,7 @@ const PossibleAudioIcon = ({text}: {text: TextWithOptionalAudio | undefined}) =>
     const classes = useStyles();
 
     const audio = text && extractAudio(text);
-    return audio ? <RecordVoiceOverIcon className={classes.voiceIcon} /> : null;
+    return audio ? <RecordVoiceOverIcon className={classes.voiceIcon} color="primary" opacity={0.65} /> : null;
 }
 
 const Description: Viewer<Content & {description?: TextWithOptionalAudio}> = ({content}) => {
