@@ -1,7 +1,7 @@
 import {
     Controller,
     Get,
-    Injectable, Post, Redirect, Render, Req, Session,
+    Injectable, Post, Redirect, Render, Req, Session, Res,
 } from '@nestjs/common';
 import { InjectModel } from "@nestjs/sequelize";
 import { generators } from "openid-client";
@@ -47,38 +47,52 @@ export class LoginController {
 
     @Post('cb')
     @Render('admin/error')
-    async callback(@Session() session, @Req() req) {
-        const params = this.googleService.client.callbackParams(req);
-        const nonce = session.oauth_nonce;
+    async callback(@Session() session, @Req() req, @Res({passthrough: true}) res) {
+        try {
+            const params = this.googleService.client.callbackParams(req);
+            const nonce = session.oauth_nonce;
 
-        console.log('param', params);
+            console.log('param', params);
 
-        const tokenSet = await this.googleService.client.callback(req.url, params, { nonce });
-        console.log('validated ID Token claims %j', tokenSet.claims());
+            const tokenSet = await this.googleService.client.callback(req.url, params, { nonce });
+            console.log('validated ID Token claims %j', tokenSet.claims());
 
-        const claims = tokenSet.claims();
+            const claims = tokenSet.claims();
 
-        if (claims.email_verified) {
-            // Find a matching admin
-            const admin = await this.adminModel.findOne({where: {email: claims.email}});
-            if (admin !== null) {
-                // Store login time and optional name
-                admin.lastLoginAt = new Date();
-                const updateName = admin.name === null;
-                if (updateName) {
-                    admin.name = claims.name;
+            if (claims.email_verified) {
+                // Find a matching admin
+                const admin = await this.adminModel.findOne({where: {email: claims.email}});
+                if (admin !== null) {
+                    // Store login time and optional name
+                    admin.lastLoginAt = new Date();
+                    const updateName = admin.name === null;
+                    if (updateName) {
+                        admin.name = claims.name;
+                    }
+                    await admin.save({silent: !updateName});
+
+                    this.userService.loginUser(admin);
+
+                    throw redirect('/');
+                } else {
+                    // Error
+                    return {msg: "No such user"};
                 }
-                await admin.save({silent: !updateName});
-
-                this.userService.loginUser(admin);
-
-                throw redirect('/');
             } else {
-                // Error
-                return {msg: "No such user"};
+                return {msg: "Your email address is not verified"};
             }
-        } else {
-            return {msg: "Your email address is not verified"};
+        } catch (e) {
+            // Clear session
+            await session.destroy();
+            const cookie = req.cookies;
+            for (const prop in cookie) {
+                if (!cookie.hasOwnProperty(prop)) {
+                    continue;
+                }
+                res.clearCookie(prop);
+            }
+            throw e;
         }
+
     }
 }
