@@ -8,7 +8,7 @@ import { generators } from "openid-client";
 
 import { GoogleService } from "../service/google.service";
 import { Admin } from "../model/admin.model";
-import { redirect } from "../util/redirect";
+import { redirect, RedirectException } from '../util/redirect';
 import { UserService } from "../service/user.service";
 
 @Controller('login')
@@ -82,7 +82,10 @@ export class LoginController {
                 return {msg: "Your email address is not verified"};
             }
         } catch (e) {
-            // Clear session
+            if (e instanceof RedirectException) {
+                throw e;
+            }
+            // Actual error, so clear session
             await session.destroy();
             const cookie = req.cookies;
             for (const prop in cookie) {
