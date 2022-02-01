@@ -20,7 +20,7 @@
         },
         "prod" : {
             "user" : "ubuntu",
-            "host" : "if.lambdacambridge.com",
+            "host" : "if.crim.cam.ac.uk",
             "ref"  : "origin/main",
             "repo" : "git@github.com:InspiringFutures/backend.git",
             "path" : "/home/ubuntu/app",
