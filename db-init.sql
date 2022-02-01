@@ -126,7 +126,6 @@ create table "SurveyAllocations" (id serial primary key,
 );
 
 CREATE INDEX ON "SurveyAllocations" ("groupId", "type");
-CREATE UNIQUE INDEX ON "SurveyAllocations" ("groupId") WHERE "type" = 'initial' AND "deletedAt" IS NULL;
 
 CREATE TABLE "Answers" (
     id serial primary key,
@@ -156,5 +155,7 @@ ALTER TABLE "SurveyAllocations" ADD COLUMN "dueAt" timestamp null;
 
 ALTER TABLE "Surveys" ADD COLUMN "deletedAt" timestamp null;
 ALTER TABLE "SurveyAllocations" ADD COLUMN "deletedAt" timestamp null;
+
+CREATE UNIQUE INDEX ON "SurveyAllocations" ("groupId") WHERE "type" = 'initial' AND "deletedAt" IS NULL;
 
 ALTER TABLE "Groups" ADD COLUMN "contactDetails" character varying null;
