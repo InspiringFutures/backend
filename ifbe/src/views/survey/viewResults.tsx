@@ -20,6 +20,13 @@ interface Props {
     journals: {[answerId: string]: {[questionId: string]: Journal[]}};
 }
 
+function extractText(text: string | {text: string}) {
+    if (typeof text === "string") {
+        return text;
+    }
+    return text?.text;
+}
+
 const SurveyResultsView = wrap(({group, clients, allocation, journals}: Props) => {
     const urlBuilder = useUrlBuilder();
     const questions: UnpackedQuestion[] = unpackQuestions(allocation);
@@ -53,16 +60,16 @@ const SurveyResultsView = wrap(({group, clients, allocation, journals}: Props) =
                 <th rowSpan={2} style={box}>Completed date</th>
                 {questions.map((q) => {
                     if (q.colCount > 1) {
-                        return <th key={q.id} colSpan={q.colCount} style={subBox}>{q.title}</th>;
+                        return <th key={q.id} colSpan={q.colCount} style={subBox}>{extractText(q.title)}</th>;
                     }
-                    return <th key={q.id} rowSpan={2} style={box}>{q.title}</th>;
+                    return <th key={q.id} rowSpan={2} style={box}>{extractText(q.title)}</th>;
                 })}
             </tr>
             <tr style={box}>
                 {questions.map((q) => {
                     return <React.Fragment key={q.id}>
-                        {q.subQuestions && q.subQuestions.map((sub, index) => <th key={index} style={index === q.colCount - 1 ? major : minor}>{sub}</th>)}
-                        {q.commentsPrompt && <th key="commentsPrompt" style={major}>{q.commentsPrompt}</th>}
+                        {q.subQuestions && q.subQuestions.map((sub, index) => <th key={index} style={index === q.colCount - 1 ? major : minor}>{extractText(sub)}</th>)}
+                        {q.commentsPrompt && <th key="commentsPrompt" style={major}>{extractText(q.commentsPrompt)}</th>}
                         {q.allowOther && <th key="choice" style={minor}>Choice</th>}
                         {q.allowOther && <th key="allowOther" style={major}>Other (choice {q.choices.length + 1})</th>}
                     </React.Fragment>;
