@@ -64,6 +64,10 @@ export class SurveyController {
     @NeedsAdmin
     async create(@Body('surveyName') surveyName: string) {
         const user = this.userService.currentUser()!;
+        surveyName = surveyName.trim();
+        if (surveyName === "") {
+            throw new BadRequestException("You must provide a survey name.");
+        }
         const survey = await this.surveyService.createSurvey(user, surveyName);
         return redirect('/survey/' + survey.id + '/edit');
     }
