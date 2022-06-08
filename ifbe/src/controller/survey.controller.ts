@@ -35,6 +35,13 @@ function parseDateOrNull(date: string, endOfDay: boolean) {
     return date && date !== '' ? new Date(`${date}${endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'}`) : null;
 }
 
+function extractText(text: string | {text: string}) {
+    if (typeof text === "string") {
+        return text;
+    }
+    return text?.text;
+}
+
 @Controller('survey')
 @Injectable()
 export class SurveyController {
@@ -287,7 +294,7 @@ export class SurveyController {
 
         const cols = flatten(questions.map((q) => {
             if (q.colCount > 1) {
-                let prefix = q.title ? q.title.trim() : "";
+                let prefix = q.title ? extractText(q.title).trim() : "";
                 if (prefix != '') {
                     if (!prefix.endsWith(':')) {
                         prefix += ':';
@@ -295,12 +302,12 @@ export class SurveyController {
                     prefix += " ";
                 }
                 return [
-                    ...(q.subQuestions || []).map((sub) => prefix + sub),
+                    ...(q.subQuestions || []).map((sub) => prefix + extractText(sub)),
                     ...q.commentsPrompt ? [prefix + "Other comments"] : [],
-                    ...q.allowOther ? [q.title, prefix + `Other (choice ${q.choices.length + 1})`] : [],
+                    ...q.allowOther ? [extractText(q.title), prefix + `Other (choice ${q.choices.length + 1})`] : [],
                 ];
             } else {
-                return [q.title];
+                return [extractText(q.title)];
             }
         }));
         cols.unshift('Participant ID', 'Completed', 'Completed at');

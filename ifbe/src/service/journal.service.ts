@@ -44,6 +44,13 @@ function extractJournalText(journal: JournalContents): string {
     return journal.type === 'text' ? journal.text : journal.type === 'media' ? journal.caption : '' + journal.length;
 }
 
+function extractText(text: string | {text: string}) {
+    if (typeof text === "string") {
+        return text;
+    }
+    return text?.text;
+}
+
 export function formatDate(date: Date) {
     return moment(date).format('YYYY-MM-DD HH:mm:ss');
 }
@@ -200,7 +207,7 @@ export class JournalService {
         if (allocation.closeAt) {
             allocationName += ` - ${formatDate(allocation.closeAt)}`;
         }
-        const questionTitleStripped = `${question.title.substr(0, 32).replace(/[^a-zA-Z0-9 ]*/, '_').replace(/^_|_$/, '')}`;
+        const questionTitleStripped = extractText(question.title).replace(/[^a-zA-Z0-9 ]+/g, '_').replace(/^_+|_+$/g, '').substr(0, 32);
         const answerName = `${question.questionNumber ? `${question.questionNumber}` : `${questionIndex + 1}`} - ${questionTitleStripped}`;
         return `Surveys/${survey.name} (${survey.id})/${allocationName}/${answerName}/${client.participantID}/${formatDate(journalDate)}/${entryFilename}`;
     }
