@@ -17,7 +17,7 @@ function formatAnswer(answer: any, question: UnpackedQuestion) {
         case 'ChoiceQuestion':
             return answer.value === 'other' ? question.choices.length + 1 : answer.value !== -1 ? answer.value + 1 : '';
         case 'CheckboxQuestion':
-            const options = question.choices.filter((_v, index) => answer.checks[index]);
+            const options = question.choices.filter((_v, index) => answer.checks?.[index]);
             if (answer.otherChecked) {
                 options.push(answer.otherText);
             }
