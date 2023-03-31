@@ -33,9 +33,9 @@ function makeToken() {
 
 export function checkToken(token: string): string | false | undefined {
     const trimmed = token.trim()
-        .replaceAll(/[^a-zA-Z0-9]/g, '')
-        .replaceAll(/[1iIl]/g, 'L')
-        .replaceAll(/[oO0]/g, '0')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .replace(/[1iIl]/g, 'L')
+        .replace(/[oO0]/g, '0')
         .toUpperCase()
     ;
     if (trimmed.length !== 20) {
